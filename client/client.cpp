@@ -1,48 +1,52 @@
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/socket.h>
-#include <unistd.h>
+// Client side implementation of UDP client-server model 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <unistd.h> 
+#include <string.h> 
+#include <sys/types.h> 
+#include <sys/socket.h> 
+#include <arpa/inet.h> 
+#include <netinet/in.h> 
+  
+#define PORT     8080 
+#define MAXLINE 64 
+  
+// Driver code 
+int main() { 
+  int sockfd; 
+  char buffer[MAXLINE]; 
+  struct sockaddr_in servaddr; 
 
-#define MY_PORT 31330
+  // Creating socket file descriptor 
+  if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+      perror("socket creation failed"); 
+      exit(EXIT_FAILURE); 
+  } 
 
-int main(int argc, char **argv)
-{
-  if (argc < 2) {
-    fprintf(stderr, "Need server IPv4 address.\n");
-    return 1;
-  }
-
-  int cfd;
-  struct sockaddr_in a;
-
-  memset(&a, 0, sizeof(struct sockaddr_in));
-  a.sin_family = AF_INET;
-  a.sin_port = htons(MY_PORT);
-  if (0 == inet_pton(AF_INET, argv[1], &a.sin_addr)) {
-    fprintf(stderr, "That's not an IPv4 address.\n");
-    return 1;
-  }
-
-  cfd = socket(AF_INET, SOCK_STREAM, 0);
-
-  if (-1 == connect(cfd, (struct sockaddr *)&a, sizeof(struct sockaddr_in))) {
-    perror("connect");
-    return 1;
-  }
-
-  // starts here
-
+  memset(&servaddr, 0, sizeof(servaddr)); 
+    
+  // Filling server information 
+  servaddr.sin_family = AF_INET; 
+  servaddr.sin_port = htons(PORT); 
+  servaddr.sin_addr.s_addr = INADDR_ANY; 
+  
   int n;
-  char buf[128];
-  // n = read(cfd, buf, 100);
-  // write(1, buf, n);
-  strcpy(buf, "alan0");
-  write(cfd, buf, strlen(buf));
-  n = read(cfd, buf, 32);
-  fprintf(stderr,"%s ::", buf);
+  socklen_t len;
+  
+   
+  //testing
+  char *hello = (char *)malloc(64); 
+  strcpy(hello, "jnalan");
 
-  close(cfd);
-  return 0;
-}
+  sendto(sockfd, (const char *)hello, strlen(hello), 
+      MSG_CONFIRM, (const struct sockaddr *) &servaddr,  
+          sizeof(servaddr)); 
+  printf("Hello message sent.\n"); 
+        
+  n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, (struct sockaddr *) &servaddr, &len); 
+  buffer[n] = '\0'; 
+  printf("Server : %s\n", buffer); 
+
+  close(sockfd); 
+  return 0; 
+} 

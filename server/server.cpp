@@ -1,160 +1,181 @@
-#include <arpa/inet.h>
+// Server side implementation of UDP client-server model 
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <unistd.h> 
+#include <string.h> 
+#include <sys/types.h> 
+#include <sys/socket.h> 
+#include <arpa/inet.h> 
+#include <netinet/in.h> 
+#include <vector> 
+#include <chrono>
+#include <ctime>
 #include <fcntl.h>
-#include <netinet/in.h>
-#include <stdio.h>
-#include <string.h>
-#include <sys/epoll.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 
-//#include "game/game.hpp"
-#include <stdlib.h>
-#define BUF_SIZE 64
-#define AMT_PLRS 4
-#define MY_PORT 31330
+#define PORT 8080 
+#define MAXLINE 64
+#define NAMESIZE 7
+#define AMTOFPLR 4
 
+struct user{
+  int id;
+  int isReady;
+  int key;
+  sockaddr_in addr;
+  char * name;
+};
 
-
-void print_client_address(const char *prefix, int fd, const struct sockaddr_in *ptr)
-{
-  char dot_notation[INET_ADDRSTRLEN];
-  inet_ntop(AF_INET, &ptr->sin_addr, dot_notation, INET_ADDRSTRLEN);
-  printf("%s: fd=%d, %s port %d\n", prefix, fd, dot_notation, ntohs(ptr->sin_port));
+// Param:
+//  vec: vec is the vector from which we will check the users
+//  key: is the key that should match a user
+//  addr: is the address the request is from, we should update the user's address if it is incorrect
+int checkKey(std::vector<user> * vec, int key ,sockaddr_in addr){
+  for(int i = 0; i < vec->size; i++){
+    if((*vec)[i].key == key){
+      (*vec)[i].addr = addr;
+      return i;
+    }
+  }
+  return -1;
 }
 
-void writeToAll(int * cfds, char *buf, int size){
-  char newBuff[100];
-  strcpy(newBuff, buf);
-  fprintf(stderr,"%s sent to all\n",newBuff);
-  for(int i = 0; i < AMT_PLRS; i++){
-    if(*(cfds + i) != -1){
-      sendto(*(cfds + i), buf, size, 0, NULL, 0);
+void setBuffer(std::vector<user>*users, char * buffer){
+  
+  memset(buffer, 0, sizeof(char)*MAXLINE);
+  for (int i = 0; i < AMTOFPLR; i++){
+    // here we put 1 (not ready) or 0 (ready) depending on if they are ready
+    *(buffer + i * (NAMESIZE + 1)) = (*users)[i].isReady + '0';
+    for (int j = 0; j < NAMESIZE; j++){
+      *(buffer + i * (NAMESIZE + 1) + 1 + j) = *((*users)[i].name + j);
+    }
+  }
+    
+  
+}
+
+int main() { 
+  int sockfd; 
+  char buffer[MAXLINE]; 
+  char cmd[2];
+
+  struct sockaddr_in servaddr;
+  struct sockaddr_in cliaddr; 
+  memset(&servaddr, 0, sizeof(servaddr)); 
+  memset(&cliaddr, 0, sizeof(cliaddr)); 
+  
+  // Creating socket file descriptor 
+  if ( (sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0 ) { 
+    perror("socket creation failed"); 
+    exit(1); 
+  } 
+    
+  // server info
+  servaddr.sin_family = AF_INET; // IPv4 
+  servaddr.sin_addr.s_addr = INADDR_ANY; 
+  servaddr.sin_port = htons(PORT); 
+    
+  // Bind the socket with the server address 
+  if ( bind(sockfd, (const struct sockaddr *)&servaddr, sizeof(servaddr)) < 0 ) { 
+    perror("bind failed"); 
+    exit(EXIT_FAILURE); 
+  } 
+  
+  socklen_t len;
+  int n; 
+
+
+  struct timeval read_timeout;
+  read_timeout.tv_sec = 0;
+  read_timeout.tv_usec = 100;
+  setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO, &read_timeout, sizeof read_timeout);
+
+  // actual stuff starts here
+
+  const int FRAMES_PER_SECOND = 60;
+  const std::chrono::milliseconds SKIP_TICKS( 1000 / FRAMES_PER_SECOND);
+  
+  int gameReady = 0;
+  std::vector<user> users;
+
+  while( !gameReady) {
+    n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len); 
+    
+    if(n > 0){
+      cmd[0] = *(buffer);
+      cmd[1] = *(buffer+1);
+      if(strcmp(cmd, "jn") == 0){
+        user u;
+        u.id = users.size;
+        u.key = rand()%10000; // just a 4 digit key
+        u.addr = cliaddr;
+        u.isReady = 1;
+        u.name = (char*)malloc(NAMESIZE * sizeof(char));
+        for(int i = 0; i < NAMESIZE; i++){
+          *(u.name + i) = *(buffer + i + 2);
+        }
+        users.push_back(u);
+
+        // we should tell them they have connected and their key or the thing is full
+
+        // connect + key
+
+        sendto(sockfd, (const char *)buffer, sizeof(char)*MAXLINE, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+      }else if(strcmp(cmd, "rq") == 0){
+        // request 
+        // for all users send to them a 4 * 8 = 32 char list of players
+        // first compile the list 
+
+        // check key first
+        char*gotKey = buffer + 2;
+        int numKey = atoi(gotKey);
+        if(checkKey(&users, numKey, cliaddr)){
+          setBuffer(&users,buffer);
+          sendto(sockfd, (const char *)buffer, sizeof(char)*MAXLINE, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+        }
+      }else if(strcmp(cmd, "rd") == 0){
+        // request 
+        // for all users send to them a 4 * 8 = 32 char list of players
+        // first compile the list 
+
+        // check key first
+        char*gotKey = buffer + 2;
+        int numKey = atoi(gotKey);
+        if(checkKey(&users, numKey, cliaddr)){
+          setBuffer(&users,buffer);
+          sendto(sockfd, (const char *)buffer, sizeof(char)*MAXLINE, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len);
+        }
+      }
+    }else{
+      // client left
+      printf("client left\n");
     }
     
   }
 
-}
 
+  auto next_game_tick = std::chrono::system_clock::now();
 
+  long sleep_time = 0;
 
-int main(void)
-{
-  // first set up game
-  //game * mygame = new game();
-  
-  int sfd;
-  struct sockaddr_in a;
-  int playerSocket[AMT_PLRS];
-  for (int i = 0; i < AMT_PLRS; i++){
-    playerSocket[i] = -1;
-  }
-  
-  char * playerNames = (char*)malloc(sizeof(char)*8*4);// each player gets a 8 size name
-  int buf[BUF_SIZE];
-
-  sfd = socket(AF_INET, SOCK_STREAM, 0);
-  memset(&a, 0, sizeof(struct sockaddr_in));
-  a.sin_family = AF_INET;
-  a.sin_port = htons(MY_PORT);
-  a.sin_addr.s_addr = htonl(INADDR_ANY);
-  if (-1 == bind(sfd, (struct sockaddr *)&a, sizeof(struct sockaddr_in))) {
-    perror("bind");
-    return 1;
-  }
-  if (-1 == listen(sfd, 2)) {
-    perror("listen");
-    return 1;
-  }
-  fcntl(sfd, F_SETFL, O_NONBLOCK);
-
-  int ep;
-  struct epoll_event e;
-
-  ep = epoll_create1(0);
-  e.events = EPOLLIN;
-  e.data.fd = sfd;
-  epoll_ctl(ep, EPOLL_CTL_ADD, sfd, &e);
-
-  
-
-  int readyForGame = false;
-
-  // Henceforth e will be reused for future epoll_* calls.
-
-  while (!readyForGame) {
-    epoll_wait(ep, &e, 1, -1);
-    if (e.data.fd == sfd) {
-      // waiting for connections
-      struct sockaddr_in ca;
-      socklen_t sinlen = sizeof(struct sockaddr_in);
-      int cfd = accept(sfd, (struct sockaddr *)&ca, &sinlen);
-      if (cfd != -1) {
-        print_client_address("Got client", cfd, &ca);
-        e.events = EPOLLIN;
-        e.data.fd = cfd;
-
-        epoll_ctl(ep, EPOLL_CTL_ADD, cfd, &e);
-
-        int newPlayerPlaced = 0;
-        for (int j = 0; j < AMT_PLRS; j++){
-          if(playerSocket[j] == -1){
-            // j is empty
-            playerSocket[j] = cfd;
-        
-            // read the name
-            char buf[8];
-            memset(buf,0,8);
-            int n = read(cfd, buf, 8);
-            
-            fprintf(stderr,"%s joins the match\n",buf);
-            for (int i = 0; i < 8; i++){
-              *(playerNames + j*8 + i) = buf[i];
-            }
-            newPlayerPlaced = 1;
-            j = AMT_PLRS; // exit loop
-          }
-        }
-        if(newPlayerPlaced == 0){
-          // somewhere here I need to tell client that this room is full
-        }
-        writeToAll(playerSocket, playerNames, 8 * 4 * sizeof(char));
-        
-      } // else cfd == -1, recall sfd is in non-blocking mode, shrug :)
-    } else {
-      // e.data.fd is a socket connected to a client. and something happend to it
-      int cfd = e.data.fd;
-      int n;
-      char buf[BUF_SIZE];
-      n = read(cfd, buf, BUF_SIZE);
-      if (n == 0) {
-        
-        printf("Client fd=%d leaves.\n", cfd);
-        epoll_ctl(ep, EPOLL_CTL_DEL, cfd, NULL);
-        close(cfd);
-        
-        for (int i = 0; i < AMT_PLRS; i++){
-          if(playerSocket[i] == cfd){
-            playerSocket[i] = -1;
-            memset((playerNames + i * 8), 0, 8);
-          }
-        }
-        
-        writeToAll(playerSocket, playerNames, 8 * 4 * sizeof(char));
-      } else if (n > 0) {
-        // check if they are asking to start. if they are, then we start
-        int isStart = strncmp(buf,"start",5);
-        if(isStart == 0){
-          readyForGame = 1;
-        }
-      } 
+  bool game_is_running = true;
+  // game loop starts here
+  while(game_is_running){
+    next_game_tick += SKIP_TICKS;
+    sleep_time =  std::chrono::duration_cast<std::chrono::milliseconds>(next_game_tick - std::chrono::system_clock::now()).count();
+    if( sleep_time >= 0 ) {
+      usleep( sleep_time );
+    }else {
+      // we are running behind!
     }
   }
 
-  // then wait for users to connect
-  fprintf(stderr,"Game Start\n\n");
-  // then game loop
-
-  return 0;
+  // n = recvfrom(sockfd, (char *)buffer, MAXLINE, MSG_WAITALL, ( struct sockaddr *) &cliaddr, &len); 
+  // buffer[n] = '\0'; 
+  // printf("Client : %s\n", buffer); 
+  // sendto(sockfd, (const char *)hello, sizeof(char)*64, MSG_CONFIRM, (const struct sockaddr *) &cliaddr, len); 
   
+  // printf("Hello message sent.\n");  
+    
+  return 0; 
 }
