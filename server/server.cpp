@@ -7,7 +7,11 @@
 #include <sys/types.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <chrono>
 
+using namespace std::chrono_literals;
+
+constexpr std::chrono::nanoseconds timestep(125ms);
 
 //#include "game/game.hpp"
 #define TO_CLI_BUF_SIZE 32
@@ -60,20 +64,33 @@ int main(int argc, char ** argv){
 
   //main loop
   clientlen = sizeof(clientaddr);
-
   
+  using clock = std::chrono::high_resolution_clock;
+  
+  
+  bool quit_game = false;
+  printf("start loop\n");
+  while(!quit_game) {
+    auto start = clock::now();
+
+    // do work here
+
+    
+
+
+    auto x = start + timestep - clock::now();
+    double microseconds = x.count()/1000.0;
+    usleep(microseconds);
+  }
+
   while(1){
     bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
-
     int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
-
     if(n < 0) {
       perror("ERROR in recv from");
       exit(1);
     }
-
     hostp = gethostbyaddr((const char *) &clientaddr.sin_addr.s_addr, sizeof(clientaddr.sin_addr.s_addr), AF_INET);
-
     if(hostp == NULL) {
       perror("ERROR on gethostbyaddr");
       exit(1);
