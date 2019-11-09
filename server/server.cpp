@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <chrono>
+#include <errno.h>
 
 using namespace std::chrono_literals;
 
@@ -48,8 +49,15 @@ int main(int argc, char ** argv){
     exit(1);
   }
 
-  int option = 1;
-  setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&option, sizeof(int));
+  //int option = 1;
+  //setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&option, sizeof(int));
+
+  struct timeval read_timeout;
+  read_timeout.tv_sec = 0;
+  read_timeout.tv_usec = 100;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&read_timeout,sizeof(read_timeout)) < 0) {
+    perror("Error with options");
+  }
 
   //internet stuff
   bzero((char*) &serveraddr, sizeof(serveraddr));
@@ -69,53 +77,70 @@ int main(int argc, char ** argv){
   
   
   bool quit_game = false;
+  unsigned int current_tick = 0;
+  double previousTickTime = 10000;
   printf("start loop\n");
+  double microseconds = 0;
   while(!quit_game) {
     auto start = clock::now();
 
-    // do work here
-
+    double timeTillNextTick = (start + timestep - clock::now()).count();
     
-
-
+    // do work here
+    // 
+    while(0 < timeTillNextTick - (double)previousTickTime*2-65000000){ 
+      bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
+      int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
+      
+      if(n >= 0){
+        hostp = gethostbyaddr((const char *) &clientaddr.sin_addr.s_addr, sizeof(clientaddr.sin_addr.s_addr), AF_INET);
+        if(hostp == NULL) {
+          perror("ERROR on gethostbyaddr");
+          exit(1);
+        }
+        hostaddrp = inet_ntoa(clientaddr.sin_addr);
+        if(hostaddrp == NULL){ 
+          perror("ERROR on inet_ntoa");
+          exit(1);
+        }
+        printf("server recieved %d/%d bytes: %s\n", (int) strlen(fromClientBuf), n, fromClientBuf);
+        bzero(toClientBuf, TO_CLI_BUF_SIZE);
+        strcpy(toClientBuf, fromClientBuf);
+        strcat(toClientBuf,"!");
+        n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
+        if(n < 0) {
+          perror("ERROR in sendto");
+          exit(1);
+        }
+      }else if(n < 0 && errno!=EAGAIN){
+        perror("ERROR in recv from");
+        exit(1);
+      }
+      
+      timeTillNextTick = (start + timestep - clock::now()).count();
+    }
+    
+    //tick here
+    auto tickStart = clock::now();
+    printf("tick: %d\n", current_tick);
+    usleep(1000);
+    previousTickTime = (clock::now() - tickStart).count();
+    if(previousTickTime < 0){
+      previousTickTime = 0;
+    }
     auto x = start + timestep - clock::now();
-    double microseconds = x.count()/1000.0;
+    microseconds = x.count()/1000.0;
+    
+    if(microseconds < 0){
+      printf("running late %lf!!!!\n", microseconds);
+      microseconds = 0;
+    }
+    printf("tick. previous tick time: %lf, slept for %lf\n", previousTickTime, microseconds);
     usleep(microseconds);
+    current_tick++;
   }
 
-  while(1){
-    bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
-    int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
-    if(n < 0) {
-      perror("ERROR in recv from");
-      exit(1);
-    }
-    hostp = gethostbyaddr((const char *) &clientaddr.sin_addr.s_addr, sizeof(clientaddr.sin_addr.s_addr), AF_INET);
-    if(hostp == NULL) {
-      perror("ERROR on gethostbyaddr");
-      exit(1);
-    }
-    hostaddrp = inet_ntoa(clientaddr.sin_addr);
-    if(hostaddrp == NULL){ 
-      perror("ERROR on inet_ntoa");
-      exit(1);
-    }
-
-    printf("server recieved %d/%d bytes: %s\n", (int) strlen(fromClientBuf), n, fromClientBuf);
-
-    bzero(toClientBuf, TO_CLI_BUF_SIZE);
-    strcpy(toClientBuf, fromClientBuf);
-    strcat(toClientBuf,"!");
-
-
-    n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
-
-    if(n < 0) {
-      perror("ERROR in sendto");
-      exit(1);
-    }
-  }
-
+  
   
   return 0;
   
