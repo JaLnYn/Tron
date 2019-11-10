@@ -10,6 +10,7 @@
 #include <chrono>
 #include <errno.h>
 
+
 using namespace std::chrono_literals;
 
 constexpr std::chrono::nanoseconds timestep(125ms);
@@ -24,6 +25,10 @@ constexpr std::chrono::nanoseconds timestep(125ms);
 //print error messaage
 
 int main(int argc, char ** argv){
+
+  //seed rand
+  srand(time(NULL));
+
   int sockfd; // socket
   int port; // my port to listen on
   socklen_t clientlen; // client's address size
@@ -70,6 +75,14 @@ int main(int argc, char ** argv){
     exit(1);
   }
 
+  // set up keys TODO
+  int playerKeys[4];
+  printf("(note we will start by using only player 1 and 2. players 3 and 4 will not work yet)");
+  printf("player| key|\n");
+  for(int i = 0; i < 4; i++){
+    playerKeys[i] = rand() % 10000; // random key from 0 - 9999
+    printf("%d     |%04d|\n",i+1, playerKeys[i]);
+  }
   //main loop
   clientlen = sizeof(clientaddr);
   
@@ -81,14 +94,15 @@ int main(int argc, char ** argv){
   double previousTickTime = 10000;
   printf("start loop\n");
   double microseconds = 0;
+  double scanTime = 35000000;
   while(!quit_game) {
     auto start = clock::now();
 
     double timeTillNextTick = (start + timestep - clock::now()).count();
     
-    // do work here
-    // 
-    while(0 < timeTillNextTick - (double)previousTickTime*2-65000000){ 
+    
+    while(0 < timeTillNextTick - (double)previousTickTime*2-scanTime*2){ 
+      auto tickStart = clock::now();
       bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
       int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
       
@@ -104,9 +118,10 @@ int main(int argc, char ** argv){
           exit(1);
         }
         printf("server recieved %d/%d bytes: %s\n", (int) strlen(fromClientBuf), n, fromClientBuf);
-        bzero(toClientBuf, TO_CLI_BUF_SIZE);
-        strcpy(toClientBuf, fromClientBuf);
-        strcat(toClientBuf,"!");
+        // parse input // TODO
+
+
+        // send current toClientBuffer
         n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
         if(n < 0) {
           perror("ERROR in sendto");
@@ -116,14 +131,20 @@ int main(int argc, char ** argv){
         perror("ERROR in recv from");
         exit(1);
       }
-      
+      scanTime = (clock::now() - tickStart).count();
+      if(scanTime < 0){
+        scanTime = 0;
+      }
       timeTillNextTick = (start + timestep - clock::now()).count();
     }
     
     //tick here
     auto tickStart = clock::now();
-    printf("tick: %d\n", current_tick);
-    usleep(1000);
+    //printf("tick: %d\n", current_tick);
+    // parse output //TODO
+
+
+
     previousTickTime = (clock::now() - tickStart).count();
     if(previousTickTime < 0){
       previousTickTime = 0;
@@ -135,7 +156,7 @@ int main(int argc, char ** argv){
       printf("running late %lf!!!!\n", microseconds);
       microseconds = 0;
     }
-    printf("tick. previous tick time: %lf, slept for %lf\n", previousTickTime, microseconds);
+    //printf("tick. previous tick time: %lf, slept for %lf\n", previousTickTime, microseconds);
     usleep(microseconds);
     current_tick++;
   }
