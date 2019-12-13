@@ -3,19 +3,29 @@
 game::game(){
   myMap = new map(WIDTH, HEIGHT);
 
-  plrs[1] = new player(4, 4, 1);
-  plrs[2] = new player(WIDTH - 4, 4, 2);
-  plrs[3] = new player(WIDTH - 4, HEIGHT - 4, 3);
-  plrs[0] = new player(4, HEIGHT - 4, 0);
+  
+  
+  if(AMT_PLRS > 0){
+    plrs[0] = new player(4, HEIGHT - 4, 0);
+  }
+  if(AMT_PLRS > 1){
+    plrs[1] = new player(4, 4, 1);
+  }
+  if(AMT_PLRS > 2){
+    plrs[2] = new player(WIDTH - 4, 4, 2);  
+  }
+  if(AMT_PLRS > 3){
+    plrs[3] = new player(WIDTH - 4, HEIGHT - 4, 3);
+  }
   
 }
 
 void game::tick(){
-  for (int i = 0; i < 4; i++){
+  for (int i = 0; i < AMT_PLRS; i++){
     plrs[i]->tick();
   }
-  for(int i = 0; i < 4; i++){
-    for(int j = 0; j < 4; j++){
+  for(int i = 0; i < AMT_PLRS; i++){
+    for(int j = 0; j < AMT_PLRS; j++){
       if(plrs[i]->getX() == plrs[j]->getX() && plrs[i]->getY() == plrs[j]->getY()){
         // if j and i are on the same square, kill both of them
         plrs[i]->kill();

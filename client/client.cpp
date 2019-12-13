@@ -5,6 +5,7 @@
 #include <sys/socket.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <ncurses.h>
 #define MY_PORT 8080
 
 

@@ -43,6 +43,10 @@ void player::tick(){
 
 }
 
+void player::kill(){
+  
+}
+
 int player::getTeam(){
   return team;
 }

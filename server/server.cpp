@@ -9,16 +9,15 @@
 #include <arpa/inet.h>
 #include <chrono>
 #include <errno.h>
-
+#include "game/game.hpp"
 
 using namespace std::chrono_literals;
 
 constexpr std::chrono::nanoseconds timestep(125ms);
 
-//#include "game/game.hpp"
+
 #define TO_CLI_BUF_SIZE 32
 #define FROM_CLI_BUF_SIZE 8
-#define AMT_PLRS 2
 
 #define NAMESIZE 7
 
@@ -75,7 +74,6 @@ int main(int argc, char ** argv){
     exit(1);
   }
 
-  // set up keys TODO
   int playerKeys[4];
   printf("(note we will start by using only player 1 and 2. players 3 and 4 will not work yet)");
   printf("player| key|\n");
