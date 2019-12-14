@@ -6,79 +6,63 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <ncurses.h>
-#define MY_PORT 8080
+#include "../game/game.hpp"
 
 
-void printNewThing(char * buf){
-  for(int i = 0; i < 4; i++){
-    for(int j = 0; j < 7; j++){
-      printf("%c", *(i*8 + buf + 1 + j));
-    }
-    printf("   ");
-    if((*buf + i * 8) == '0'){
-      printf("ready\n");
-    }else{
-      printf("not ready\n");
+#define FROM_SER_BUF_SIZE 32
+#define TO_SER_BUF_SIZE 8
+//load the game onto the window
+void loadWin(game* g, WINDOW * w){
+  for (int x = 0; x < MAP_WIDTH; x++){
+    for(int y = 0; y < MAP_HEIGHT; y++){
+      mvwprintw(w, y+1,x*2+1,"%c",g->blockVal(x,y)+'0');
     }
   }
+  move(0,0);
+  wrefresh(w);
 }
 
-int main(int argc, char **argv)
-{
-
-  char name[7];
-  scanf("%s",name);
-
-  if (argc < 2) {
-    fprintf(stderr, "Need server IPv4 address and port.\n");
-    return 1;
-  }
-
-  int cfd;
-  struct sockaddr_in a;
-
-  memset(&a, 0, sizeof(struct sockaddr_in));
-  a.sin_family = AF_INET;
-  a.sin_port = htons(atoi(argv[2]));
-  if (0 == inet_pton(AF_INET, argv[1], &a.sin_addr)) {
-    fprintf(stderr, "That's not an IPv4 address.\n");
-    return 1;
-  }
-
-  cfd = socket(AF_INET, SOCK_STREAM, 0);
-
-  if (-1 == connect(cfd, (struct sockaddr *)&a, sizeof(struct sockaddr_in))) {
-    perror("connect");
-    return 1;
-  }
-
-  // starts here
-
-  int n;
-  char buf[64];
-  // n = read(cfd, buf, 100);
-  // write(1, buf, n);
+int main(int argc, char **argv){
   
-  strcpy(buf, name);
-  write(cfd, buf, strlen(buf));
+  //char toServerBuf[TO_SER_BUF_SIZE];
+  //char fromServerBuf[FROM_SER_BUF_SIZE];
+
+// first lets set up n curses
+  game*g = new game();
+  //g->loadGame("");
+
+  int startx=10,starty=10;
+  initscr();
+  cbreak();
+  noecho();
+
+  WINDOW * board = newwin(MAP_HEIGHT+2,2*MAP_WIDTH+1, starty, startx);
+  refresh();  
+  box(board, 0, 0);
   
-  while(1){
-    int cmd = -1;
-    scanf("%d",&cmd);
-    if(cmd == 1){
-      
-      n = read(cfd, buf, 64);
-      if(strncmp(buf, "kick",4) == 0){
-        printf("ya got kicked");
-        exit(0);
-      }
   
-      printNewThing(buf);
+
+	int c = getch();
+  int dir;
+  while(c != 'c'){
+    // change direc
+    if(c == 'a'){
+      dir = 1;
+    }else if(c == 's'){
+      dir = 2;
+    }else if(c == 'd'){
+      dir = 3;
+    }else if(c == 'w'){
+      dir = 0;
     }
+    g->setDirection(0,dir);
+    g->tick();
+    loadWin(g,board);
+
+    c = getch();
   }
-
   
+	endwin();
 
-  close(cfd);
   return 0;
 }

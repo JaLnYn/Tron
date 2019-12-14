@@ -42,32 +42,54 @@ void game::tick(){
 }
 
 void game::storeNumber(int n, char * c){
-  if(n >= 100 || n < 0){
-    return;
-  }
-  *c = n/10 + '0';
-  *(c + 1) = n%10 + '0';
+  
 }
 
+// prereq: data must be 32 chars long
 void game::storeGame(char * data){
-  int currentIndex = 0;
-  for (int i = 0; i < AMT_PLRS; i++){
-    // for each player store it's x and y. also store the previous steps
-    storeNumber(plrs[i]->getX(), data+currentIndex);
-    currentIndex += 2;
-    storeNumber(plrs[i]->getY(), data+currentIndex);
-    currentIndex += 2;
-    for (int j = 0; j < 3; j++){
-      storeNumber(plrs[i]->getPx(2-j), data+currentIndex);
-      currentIndex += 2;
-      storeNumber(plrs[i]->getPy(2-j), data+currentIndex);
-      currentIndex += 2;
-    }
-
+  for(int i = 0; i < 32; i++){
+    data[i] = 0;
   }
+  for (int i = 0; i < AMT_PLRS; i++){
+    // first lets use the first character to store user data
+    data[i*8] = plrs[i]->getUserData();
+
+    // next lets store the 7 tiles
+    for (int j = 0; j < 6; j++){
+      char loc = plrs[i]->getPy(j);
+      loc += plrs[i]->getPx(j)*2^4;
+      data[i*8+j+1] = loc;
+    }
+    char loc = plrs[i]->getY();
+    loc += plrs[i]->getX()*2^4;
+
+    data[i*8+7] = loc;
+    
+  }
+  
+}
+
+void game::loadGame(char * data){
+  for (int i = 0; i < AMT_PLRS; i++){
+    int x = data[i*8+7]/2^4;
+    int y = data[i*8+7]%2^4;
+    plrs[i]->loadUserData(data[i*8],x,y);
+  }
+  for (int i = 0; i < AMT_PLRS; i++){
+    for (int j = 0; j < 7; j++){
+      int x = data[i*8+j+1]/2^4;
+      int y = data[i*8+j+1]%2^4;
+      myMap->setControl(x,y,plrs[i]->getTeam());
+    }
+  }
+  
 }
 
 void game::setDirection(int player, int dir){
   plrs[player]->changeDir(dir);
+}
+
+int game::blockVal(int x, int y){
+  return myMap->getController(x,y);
 }
 

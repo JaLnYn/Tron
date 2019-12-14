@@ -9,7 +9,7 @@
 #include <arpa/inet.h>
 #include <chrono>
 #include <errno.h>
-#include "game/game.hpp"
+#include "../game/game.hpp"
 
 using namespace std::chrono_literals;
 
@@ -19,9 +19,9 @@ constexpr std::chrono::nanoseconds timestep(125ms);
 #define TO_CLI_BUF_SIZE 32
 #define FROM_CLI_BUF_SIZE 8
 
-#define NAMESIZE 7
+// This function is used to 
 
-//print error messaage
+
 
 int main(int argc, char ** argv){
 

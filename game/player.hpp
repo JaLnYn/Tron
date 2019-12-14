@@ -29,6 +29,9 @@ public:
   // get the team
   int getTeam();
 
+  char getUserData();
+  void loadUserData(char l, int x, int y);
+
   // get x and y
   int getX();
   int getY();

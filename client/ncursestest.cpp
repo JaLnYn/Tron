@@ -1,12 +1,24 @@
+
 #include <ncurses.h>
 
 int main()
 {	
-	initscr();			/* Start curses mode 		  */
-	printw("Hello World !!!");	/* Print Hello World		  */
-	refresh();			/* Print it on to the real screen */
-	getch();			/* Wait for user input */
-	endwin();			/* End curses mode		  */
+
+	int x, y;
+	x = 10; y = 10;
+
+	initscr();
+
+	int height,width, start_y, start_x;
+	height = 10;
+	width = 20;
+	start_y = start_x = 10;
+
+	
+	
+
+	int c = getch();
+	endwin();
 
 	return 0;
 }
