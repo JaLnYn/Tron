@@ -6,13 +6,13 @@ game::game(){
   
   
   if(AMT_PLRS > 0){
-    plrs[0] = new player(4, HEIGHT - 4, 0);
+    plrs[0] = new player(3, HEIGHT - 4, 0);
   }
   if(AMT_PLRS > 1){
-    plrs[1] = new player(4, 4, 1);
+    plrs[1] = new player(3, 3, 1);
   }
   if(AMT_PLRS > 2){
-    plrs[2] = new player(WIDTH - 4, 4, 2);  
+    plrs[2] = new player(WIDTH - 4, 3, 2);  
   }
   if(AMT_PLRS > 3){
     plrs[3] = new player(WIDTH - 4, HEIGHT - 4, 3);

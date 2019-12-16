@@ -10,10 +10,10 @@
 #include <ncurses.h>
 #include "../game/game.hpp"
 
+
 #define FROM_SER_BUF_SIZE 32
 #define TO_SER_BUF_SIZE 8
 //load the game onto the window
-
 void loadWin(game* g, WINDOW * w){
   for (int x = 0; x < MAP_WIDTH; x++){
     for(int y = 0; y < MAP_HEIGHT; y++){
@@ -23,6 +23,7 @@ void loadWin(game* g, WINDOW * w){
   move(0,0);
   wrefresh(w);
 }
+
 int main(int argc, char **argv){
   
   int sockfd, portno, n;
@@ -65,6 +66,11 @@ int main(int argc, char **argv){
   (char *)&serveraddr.sin_addr.s_addr, server->h_length);
   serveraddr.sin_port = htons(portno);
 
+  if(connect(sockfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0) { 
+      printf("\n Error : Connect Failed \n"); 
+      exit(0); 
+  } 
+
   bzero(toServerBuf, TO_SER_BUF_SIZE);
   int key = 0;
   printf("Please enter your key: ");
@@ -88,12 +94,10 @@ int main(int argc, char **argv){
     exit(0);
   }
 
-  //TODO wait for server to get send start signal
-
   // first lets set up n curses
 
-
-  // g->loadGame("");
+  game*g = new game();
+  //g->loadGame("");
 
   int startx=10,starty=10;
   initscr();
@@ -104,9 +108,27 @@ int main(int argc, char **argv){
   refresh();  
   box(board, 0, 0);
   
-  mvwprintw(board,1,1,"Gamestart");
-  wrefresh(board);
+  
+
 	int c = getch();
+  int dir;
+  while(c != 'c'){
+    // change direc
+    if(c == 'a'){
+      dir = 1;
+    }else if(c == 's'){
+      dir = 2;
+    }else if(c == 'd'){
+      dir = 3;
+    }else if(c == 'w'){
+      dir = 0;
+    }
+    g->setDirection(0,dir);
+    g->tick();
+    loadWin(g,board);
+
+    c = getch();
+  }
   
 	endwin();
 

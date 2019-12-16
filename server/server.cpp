@@ -9,6 +9,7 @@
 #include <arpa/inet.h>
 #include <chrono>
 #include <errno.h>
+#include <ifaddrs.h>
 #include "../game/game.hpp"
 
 using namespace std::chrono_literals;
@@ -19,7 +20,36 @@ constexpr std::chrono::nanoseconds timestep(125ms);
 #define TO_CLI_BUF_SIZE 32
 #define FROM_CLI_BUF_SIZE 8
 
-// This function is used to 
+// This function is used to print addresses
+
+void printAddr(){
+
+  struct ifaddrs * ifAddrStruct=NULL;
+  struct ifaddrs * ifa=NULL;
+  void * tmpAddrPtr=NULL;
+  
+  getifaddrs(&ifAddrStruct);
+
+  for (ifa = ifAddrStruct; ifa != NULL; ifa = ifa->ifa_next) {
+    if (!ifa->ifa_addr) {
+      continue;
+    }
+    if (ifa->ifa_addr->sa_family == AF_INET) { // check it is IP4
+      // is a valid IP4 Address
+      tmpAddrPtr=&((struct sockaddr_in *)ifa->ifa_addr)->sin_addr;
+      char addressBuffer[INET_ADDRSTRLEN];
+      inet_ntop(AF_INET, tmpAddrPtr, addressBuffer, INET_ADDRSTRLEN);
+      printf("%s IP Address %s\n", ifa->ifa_name, addressBuffer); 
+    } else if (ifa->ifa_addr->sa_family == AF_INET6) { // check it is IP6
+      // is a valid IP6 Address
+      tmpAddrPtr=&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr;
+        char addressBuffer[INET6_ADDRSTRLEN];
+      inet_ntop(AF_INET6, tmpAddrPtr, addressBuffer, INET6_ADDRSTRLEN);
+      printf("%s IP Address %s\n", ifa->ifa_name, addressBuffer); 
+    } 
+  }
+  if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
+}
 
 
 
@@ -56,12 +86,6 @@ int main(int argc, char ** argv){
   //int option = 1;
   //setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&option, sizeof(int));
 
-  struct timeval read_timeout;
-  read_timeout.tv_sec = 0;
-  read_timeout.tv_usec = 100;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&read_timeout,sizeof(read_timeout)) < 0) {
-    perror("Error with options");
-  }
 
   //internet stuff
   bzero((char*) &serveraddr, sizeof(serveraddr));
@@ -74,14 +98,72 @@ int main(int argc, char ** argv){
     exit(1);
   }
 
+  
+
   int playerKeys[4];
-  printf("(note we will start by using only player 1 and 2. players 3 and 4 will not work yet)");
-  printf("player| key|\n");
+  int playerJoined[4];
+  printf("(note we will start by using only player 1 and 2. players 3 and 4 will not work yet)\n");
+  printf("Enter amount of players: \n");
+  int amountPlayers = 0;
+  scanf("%d",&amountPlayers);
+  // hacky way to clear screen
+  printf("\033[H\033[J");
+  printAddr();
+  printf("PORT: %d\n", port);
+  printf("player| key| in\n");
   for(int i = 0; i < 4; i++){
-    playerKeys[i] = rand() % 10000; // random key from 0 - 9999
-    printf("%d     |%04d|\n",i+1, playerKeys[i]);
+    playerKeys[i] = rand()%10000;
+    printf("%d     |%04d|",i+1, playerKeys[i]);
+    if(playerJoined[i] == 1){
+      printf(" o\n");
+    }else{
+      printf(" x\n");
+    }
+    fflush(stdin);
+  } 
+  for(int i = 0; i < amountPlayers;i++){
+
+    bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
+    int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
+    //TODO store senders 
+    if(n>0){
+      int key = fromClientBuf[0]; //TODO change the way keys are extracted.
+      for(int j = 0; j < 4; j++){
+        if(playerKeys[j] == key){
+          playerJoined[j] = 1;
+        }
+      }
+      printf("\033[H\033[J");
+      printAddr();
+      printf("PORT: %d\n", port);
+      printf("player| key| in\n");
+      for(int i = 0; i < 4; i++){
+        printf("%d     |%04d|",i+1, playerKeys[i]);
+        if(playerJoined[i] == 1){
+          printf(" o\n");
+        }else{
+          printf(" x\n");
+        }
+      } 
+      printf("got something\n");
+      printf("\n%d\n",key);
+      fflush(stdin);
+    }
   }
+  //TODO finished waiting for all senders. send them start signal
+  //MAY BE USEFULL:n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
+  
+  
+  // wait for connections
   //main loop
+  //set some options 
+
+  struct timeval read_timeout;
+  read_timeout.tv_sec = 0;
+  read_timeout.tv_usec = 100;
+  if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&read_timeout,sizeof(read_timeout)) < 0) {
+    perror("Error with options");
+  }
   clientlen = sizeof(clientaddr);
   
   using clock = std::chrono::high_resolution_clock;
