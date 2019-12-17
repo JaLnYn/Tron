@@ -7,15 +7,23 @@ game::game(){
   
   if(AMT_PLRS > 0){
     plrs[0] = new player(3, HEIGHT - 4, 0);
+    player*plr = plrs[0];
+    myMap->setControl(plr->getX(),plr->getY(), plr->getTeam());
   }
   if(AMT_PLRS > 1){
     plrs[1] = new player(3, 3, 1);
+    player*plr = plrs[1];
+    myMap->setControl(plr->getX(),plr->getY(), plr->getTeam());
   }
   if(AMT_PLRS > 2){
     plrs[2] = new player(WIDTH - 4, 3, 2);  
+    player*plr = plrs[2];
+    myMap->setControl(plr->getX(),plr->getY(), plr->getTeam());
   }
   if(AMT_PLRS > 3){
     plrs[3] = new player(WIDTH - 4, HEIGHT - 4, 3);
+    player*plr = plrs[3];
+    myMap->setControl(plr->getX(),plr->getY(), plr->getTeam());
   }
   
 }
@@ -39,10 +47,6 @@ void game::tick(){
       myMap->setControl(plrs[i]->getX(), plrs[i]->getY(), plrs[i]->getTeam());
     }
   }
-}
-
-void game::storeNumber(int n, char * c){
-  
 }
 
 // prereq: data must be 32 chars long
@@ -70,6 +74,7 @@ void game::storeGame(char * data){
 }
 
 void game::loadGame(char * data){
+  
   for (int i = 0; i < AMT_PLRS; i++){
     int x = data[i*8+7]/2^4;
     int y = data[i*8+7]%2^4;
@@ -93,3 +98,6 @@ int game::blockVal(int x, int y){
   return myMap->getController(x,y);
 }
 
+game::~game(){
+  
+}

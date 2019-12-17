@@ -4,7 +4,7 @@
 #include "map.hpp"
 #include "player.hpp"
 
-#define AMT_PLRS 1
+#define AMT_PLRS 4
 #define MAP_WIDTH 16
 #define MAP_HEIGHT 16
 class game{

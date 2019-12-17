@@ -58,8 +58,8 @@ char player::getUserData(){
   c += ded;
   return c;
 }
-void player::loadUserData(char c, int z,int y){
-  team = c/2^6;
+void player::loadUserData(char c, int x,int y){
+  team = c/(2^6);
   dir = (c - team*(2^6))/(2^4);
   ded = (c - team*(2^6) - dir*(2^4));
   this->x = x;

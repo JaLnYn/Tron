@@ -12,7 +12,6 @@
 #include <ifaddrs.h>
 #include "../game/game.hpp"
 
-
 using namespace std::chrono_literals;
 
 constexpr std::chrono::nanoseconds timestep(125ms);
@@ -52,26 +51,9 @@ void printAddr(){
   if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 }
 
-int extractCommand(char * fromClientBuf){
-  int cmd = (fromClientBuf[4]-'0')*100;
-      cmd += (fromClientBuf[5]-'0')*10;
-      cmd += (fromClientBuf[6]-'0')*1;
-  return cmd;
-}
-int extractKey(char * fromClientBuf){
-  int key = (fromClientBuf[0]-'0')*1000;
-      key += (fromClientBuf[1]-'0')*100;
-      key += (fromClientBuf[2]-'0')*10;
-      key += (fromClientBuf[3]-'0');
-  return key;
-}
+
 
 int main(int argc, char ** argv){
-
-
-
-  game *g = new game();
-  g->blockVal(0,0);
 
   //seed rand
   srand(time(NULL));
@@ -81,6 +63,7 @@ int main(int argc, char ** argv){
   socklen_t clientlen; // client's address size
   struct sockaddr_in serveraddr; // server's address
   struct sockaddr_in clientaddr; // client's address
+  int currentAddrMax = 0;
   struct hostent * hostp; //host info
   char * hostaddrp; // host adddr string
   char toClientBuf[TO_CLI_BUF_SIZE];
@@ -114,11 +97,12 @@ int main(int argc, char ** argv){
     perror("ERROR on bind");
     exit(1);
   }
-  bzero(toClientBuf, TO_CLI_BUF_SIZE);
+
+  
 
   int playerKeys[4];
   int playerJoined[4];
-  printf("(1, 2, 3, 4)\n");
+  printf("(note we will start by using only player 1 and 2. players 3 and 4 will not work yet)\n");
   printf("Enter amount of players: \n");
   int amountPlayers = 0;
   scanf("%d",&amountPlayers);
@@ -130,17 +114,7 @@ int main(int argc, char ** argv){
   for(int i = 0; i < 4; i++){
     bool keyExists = true;
     while (keyExists == true ){
-      while (keyExists == true ){
-        playerKeys[i] = rand()%10000;
-        playerJoined[i] = 0;
-        keyExists = false;
-
-        for(int j = 0; j < i; j++){
-          if(playerKeys[i] == playerKeys[j]){
-            keyExists = true;
-          }
-        }
-      }
+      playerKeys[i] = rand()%10000;
       keyExists = false;
       for(int j = 0; j < i; j++){
         if(playerKeys[i] == playerKeys[j]){
@@ -157,56 +131,53 @@ int main(int argc, char ** argv){
     }
     fflush(stdin);
   } 
-  for(int i = 0; i < amountPlayers;){
+  for(int i = 0; i < amountPlayers;i++){
 
     bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
     
     int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
-    
+    //TODO store senders 
     if(n>0){
-
-      int key = extractKey(fromClientBuf);
-      int cmd = extractCommand(fromClientBuf);
-
-      if(cmd == 0){ // cmd for conenct
-        for (int j = 0; j < 4; j++){
-          if(playerKeys[j] == key && playerJoined[j] == 0){
-            playerJoined[j] = 1;
-            i++;
-            break;
-          }
+      int key = (fromClientBuf[0]-'0')*1000; //TODO change the way keys are extracted.
+      key += (fromClientBuf[1]-'0')*100;
+      key += (fromClientBuf[2]-'0')*10;
+      key += (fromClientBuf[3]-'0');
+      for (int i = 0; i < 4; i++){
+        if(playerKeys[i] == key && playerJoined[i] == 0){
+          playerJoined[i] = 1;
+          currentAddrMax++;
         }
       }
-      n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
-      if(n < 0) {
-        perror("ERROR in sendto");
-        exit(1);
-      }
-
       
       printf("\033[H\033[J");
       printAddr();
       printf("PORT: %d\n", port);
       printf("player| key| in\n");
-      for(int j = 0; j < 4; j++){
-        printf("%d     |%04d|",j+1, playerKeys[j]);
-        if(playerJoined[j] != 0){
+      for(int i = 0; i < 4; i++){
+        printf("%d     |%04d|",i+1, playerKeys[i]);
+        if(playerJoined[i] == 1){
           printf(" o\n");
         }else{
           printf(" x\n");
         }
       }
-
-      printf("%d players have joined\n", i);
-      fflush(stdin);
-      
       // decode key
       
       
     }
   }
-
-
+  //TODO finished waiting for all senders. send them start signal
+  //MAY BE USEFULL:n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
+  
+  strcpy(toClientBuf, "start");
+  for(int j = 0; j < currentAddrMax; j++){
+    int n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
+    if(n < 0) {
+      perror("ERROR in sendto");
+      printf("%d\n",j);
+      exit(1);
+    }
+  }
   
   // wait for connections
   //main loop
