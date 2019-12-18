@@ -66,26 +66,28 @@ int extractKey(char * fromClientBuf){
   return key;
 }
 
+
+
 int main(int argc, char ** argv){
-
-
-
-  game *g = new game();
-  g->blockVal(0,0);
 
   //seed rand
   srand(time(NULL));
 
+  game*g = new game();
+
   int sockfd; // socket
   int port; // my port to listen on
-  socklen_t clientlen; // client's address size
   struct sockaddr_in serveraddr; // server's address
+  struct sockaddr_in clientaddrs[4];
+  socklen_t clientlen; // client's address size
   struct sockaddr_in clientaddr; // client's address
+  socklen_t clientLens[4];
+  int currentAddrMax = 0;
   struct hostent * hostp; //host info
   char * hostaddrp; // host adddr string
   char toClientBuf[TO_CLI_BUF_SIZE];
   char fromClientBuf[FROM_CLI_BUF_SIZE];
-  
+
 
   if(argc != 2){
     perror("usage: file <port>");
@@ -100,8 +102,8 @@ int main(int argc, char ** argv){
     exit(1);
   }
 
-  // int option = 1;
-  // setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&option, sizeof(int));
+  //int option = 1;
+  //setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&option, sizeof(int));
 
 
   //internet stuff
@@ -114,12 +116,12 @@ int main(int argc, char ** argv){
     perror("ERROR on bind");
     exit(1);
   }
-  clientlen = sizeof(clientaddr);
-  bzero(toClientBuf, TO_CLI_BUF_SIZE);
+
+
 
   int playerKeys[4];
   int playerJoined[4];
-  printf("(1, 2, 3, 4)\n");
+  printf("(you can enter 1,2,3 or 4)\n");
   printf("Enter amount of players: \n");
   int amountPlayers = 0;
   scanf("%d",&amountPlayers);
@@ -131,17 +133,8 @@ int main(int argc, char ** argv){
   for(int i = 0; i < 4; i++){
     bool keyExists = true;
     while (keyExists == true ){
-      while (keyExists == true ){
-        playerKeys[i] = rand()%10000;
-        playerJoined[i] = 0;
-        keyExists = false;
-
-        for(int j = 0; j < i; j++){
-          if(playerKeys[i] == playerKeys[j]){
-            keyExists = true;
-          }
-        }
-      }
+      playerKeys[i] = rand()%10000;
+      playerJoined[i] = 0;
       keyExists = false;
       for(int j = 0; j < i; j++){
         if(playerKeys[i] == playerKeys[j]){
@@ -149,7 +142,7 @@ int main(int argc, char ** argv){
         }
       }
     }
-    
+
     printf("%d     |%04d|",i+1, playerKeys[i]);
     if(playerJoined[i] == 1){
       printf(" o\n");
@@ -161,57 +154,57 @@ int main(int argc, char ** argv){
   for(int i = 0; i < amountPlayers;){
 
     bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
-    
-    int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
-    
-    if(n>0){
 
+    int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddrs[currentAddrMax], &(clientLens[currentAddrMax]));
+    //TODO store senders 
+    if(n>0){
+      printf("\033[H\033[J");
       int key = extractKey(fromClientBuf);
       int cmd = extractCommand(fromClientBuf);
-
-      if(cmd == 0){ // cmd for conenct
+      if(cmd == 0){
         for (int j = 0; j < 4; j++){
           if(playerKeys[j] == key && playerJoined[j] == 0){
             playerJoined[j] = 1;
+            currentAddrMax++;
             i++;
-            break;
           }
         }
       }
-      n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddr, clientlen);
-      if(n < 0) {
-        perror("ERROR in sendto");
-        exit(1);
-      }
-
       
-      printf("\033[H\033[J");
+      
       printAddr();
       printf("PORT: %d\n", port);
+      printf("%d, %d attempted to join.\n", key, cmd);
       printf("player| key| in\n");
-      for(int j = 0; j < 4; j++){
-        printf("%d     |%04d|",j+1, playerKeys[j]);
-        if(playerJoined[j] != 0){
+      for(int i = 0; i < 4; i++){
+        printf("%d     |%04d|",i+1, playerKeys[i]);
+        if(playerJoined[i] != 0){
           printf(" o\n");
         }else{
           printf(" x\n");
         }
       }
-
-      printf("%d players have joined\n", i);
-      fflush(stdin);
-      
       // decode key
-      
-      
+
+    }
+  }
+  //TODO finished waiting for all senders. send them start signal
+  //MAY BE USEFULL:n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
+
+  g->storeGame(toClientBuf);
+
+  for(int j = 0; j < currentAddrMax; j++){
+    int n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));
+    if(n < 0) {
+      perror("ERROR in sendto");
+      exit(1);
     }
   }
 
-
-  
   // wait for connections
   //main loop
   //set some options 
+
 
   struct timeval read_timeout;
   read_timeout.tv_sec = 0;

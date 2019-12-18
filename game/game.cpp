@@ -50,6 +50,7 @@ void game::tick(){
 }
 
 // prereq: data must be 32 chars long
+// stores the game into data
 void game::storeGame(char * data){
   for(int i = 0; i < 32; i++){
     data[i] = 0;

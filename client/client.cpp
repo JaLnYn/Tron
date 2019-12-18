@@ -91,10 +91,9 @@ int main(int argc, char **argv){
   serverlen = sizeof(serveraddr);
 
   // connect to server 
-  if(connect(sockfd, (struct sockaddr *)&serveraddr, serverlen) < 0) 
-  { 
-      printf("\n Error : Connect Failed \n"); 
-      exit(0); 
+  if(connect(sockfd, (struct sockaddr *)&serveraddr, serverlen) < 0) { 
+    printf("\n Error : Connect Failed \n"); 
+    exit(0); 
   } 
 
 
@@ -108,28 +107,7 @@ int main(int argc, char **argv){
     exit(1);
   }
 
-
-
   setSendItem(toServerBuf,key,0,0);
-
-  
-  
-  
-
-  n = sendto(sockfd, toServerBuf, TO_SER_BUF_SIZE, 0, ( struct sockaddr *) &serveraddr, serverlen);
-  printf("%d, %s was sent\n", n,toServerBuf);
-  if (n < 0){
-    perror("ERROR: sendto");
-    exit(0);
-  }
-  
-
-  bzero(fromServerBuf, FROM_SER_BUF_SIZE);
-  n = recvfrom(sockfd, fromServerBuf, FROM_SER_BUF_SIZE, 0,( struct sockaddr *) &serveraddr, &serverlen);
-  if(n < 0) {
-    perror("ERROR in recv");
-    exit(1);
-  }
 
   n = sendto(sockfd, toServerBuf, TO_SER_BUF_SIZE, 0, ( struct sockaddr *) &serveraddr, serverlen);
   printf("%d, %s was sent\n", n,toServerBuf);
