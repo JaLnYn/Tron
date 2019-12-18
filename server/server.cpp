@@ -114,6 +114,7 @@ int main(int argc, char ** argv){
     perror("ERROR on bind");
     exit(1);
   }
+  clientlen = sizeof(clientaddr);
   bzero(toClientBuf, TO_CLI_BUF_SIZE);
 
   int playerKeys[4];
@@ -177,7 +178,7 @@ int main(int argc, char ** argv){
           }
         }
       }
-      n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
+      n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddr, clientlen);
       if(n < 0) {
         perror("ERROR in sendto");
         exit(1);
