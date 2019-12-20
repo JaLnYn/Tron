@@ -193,9 +193,9 @@ int main(int argc, char ** argv){
 
   bzero(toClientBuf,TO_CLI_BUF_SIZE);
   g->storeGame(toClientBuf);
-  for (int i = 0; i < 32; i++){
-    printf("%d ", toClientBuf[i]);
-  }
+  // for (int i = 0; i < 32; i++){
+  //   printf("%d ", toClientBuf[i]);
+  // }
 
   for(int j = 0; j < currentAddrMax; j++){
     int n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));

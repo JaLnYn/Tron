@@ -21,7 +21,9 @@ int map::getController(int x, int y){
 }
 
 void map::setControl(int x, int y, int c){
-  *getAddress(x, y) = c;
+  if(x >= 0 && y >=0 && y < height && x < width){
+    *getAddress(x, y) = c;
+  }
 }
 
 map::~map(){

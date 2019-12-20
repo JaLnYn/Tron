@@ -126,6 +126,7 @@ int main(int argc, char **argv){
   
   g->resetBoard();
   g->loadGame(fromServerBuf);
+  
   int startx=10,starty=10;
   initscr();
   cbreak();
@@ -134,9 +135,9 @@ int main(int argc, char **argv){
   WINDOW * board = newwin(MAP_HEIGHT+2,2*MAP_WIDTH+1, starty, startx);
 
   box(board, 0, 0);
-  for (int i = 0; i < 32; i++){
-    printw("%d ", fromServerBuf[i]);
-  }
+  // for (int i = 0; i < 32; i++){
+  //   printw("%d ", fromServerBuf[i]);
+  // }
   
   refresh();  
 
