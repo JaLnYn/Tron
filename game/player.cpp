@@ -5,7 +5,7 @@ player::player(int startx, int starty, int startdir){
   this->y = starty;
   this->dir = startdir;
   ded = 0;
-  team = dir;
+  team = startdir;
 
   px = (int *) malloc(sizeof(int) * 6);
   py = (int *) malloc(sizeof(int) * 6);
@@ -51,17 +51,42 @@ int player::getTeam(){
   return team;
 }
 
-char player::getUserData(){
-  char c = 0;
-  c += getTeam()*2^6;
-  c += dir*2^4;
-  c += ded;
+int player::getDir(){
+  return dir;
+}
+
+int player::getDed(){
+  return ded;
+}
+
+unsigned char player::getUserData(){
+  if(team >= 4 || team < 0){
+    perror("get userData team out of bounds");
+    exit(0);
+  }
+  if( dir >=4 || dir < 0){
+    perror("get userData dir out of bounds");
+    exit(0);
+  }
+  if(ded >1 || ded < 0){
+    perror("get userData ded out of bounds");
+    exit(0);
+  }
+  int c = 0;
+  c += this->getTeam()*(64);
+  c += this->getDir()*16;
+  c += this->getDed();
+  
   return c;
 }
-void player::loadUserData(char c, int x,int y){
-  team = c/(2^6);
-  dir = (c - team*(2^6))/(2^4);
-  ded = (c - team*(2^6) - dir*(2^4));
+void player::loadUserData(unsigned char c, int x,int y){
+  if(team >= 4 || team < 0 || dir >=4 || dir < 0 || ded >1 || ded < 0){
+    perror("load userData out of bounds");
+    exit(0);
+  }
+  team = c/(64);
+  dir = (c - team*(64))/(16);
+  ded = (c - team*(64) - dir*(16));
   this->x = x;
   this->y = y;
 }

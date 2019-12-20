@@ -16,7 +16,7 @@ private:
   player * plrs[AMT_PLRS];
   map * myMap;
 
-  void storeNumber(int n, char * c);
+  void storeNumber(int n, unsigned char * c);
 
 public:
   game();
@@ -25,14 +25,16 @@ public:
   void tick();
   void setDirection(int player, int dir);
   // change string to 
-  void storeGame(char * buf);
+  void storeGame(unsigned char * buf);
 
   //CLIENTSIDE
   // get the value of the block at the location
   // 0-3 being the players, 4-7 being their trail.
   int blockVal(int x, int y);
-  
-  void loadGame(char * buf);
+  void loadGame(unsigned char * buf);
+
+  // this function is for testing only set everything to zero
+  void resetBoard();
 
   ~game();
 };

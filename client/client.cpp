@@ -26,25 +26,24 @@ void loadWin(game* g, WINDOW * w){
   wrefresh(w);
 }
 
-void setKey(char * toServerBuf, int key){
+void setKey(unsigned char * toServerBuf, int key){
 
   toServerBuf[0] = key/1000 + '0';
   toServerBuf[1] = (key%1000)/100 + '0';
   toServerBuf[2] = (key%100)/10 +'0';
   toServerBuf[3] = key%10 + '0';
 }
-void setCmd(char * toServerBuf, int cmd){
+void setCmd(unsigned char * toServerBuf, int cmd){
   toServerBuf[4] = (cmd)/100 + '0';
   toServerBuf[5] = (cmd%100)/10 +'0';
   toServerBuf[6] = cmd%10 + '0';
 }
 
-void setSendItem(char * toserv, int key, int cmd, char final){
+void setSendItem(unsigned char * toserv, int key, int cmd, unsigned char final){
   bzero(toserv, 8);
   setKey(toserv, key);
   setCmd(toserv, 0);
   toserv[7] = final + '0';
-  toserv[8] = 0;
 }
 
 int main(int argc, char **argv){
@@ -56,8 +55,8 @@ int main(int argc, char **argv){
   char *hostname;
   game * g = new game();
 
-  char toServerBuf[TO_SER_BUF_SIZE];
-  char fromServerBuf[FROM_SER_BUF_SIZE];
+  unsigned char toServerBuf[TO_SER_BUF_SIZE];
+  unsigned char fromServerBuf[FROM_SER_BUF_SIZE];
 
   if (argc != 3) {
     perror("usage: filename <hostname> <port>\n");
@@ -83,10 +82,10 @@ int main(int argc, char **argv){
 
   // build server's internet address
 
-  bzero((char *) &serveraddr, sizeof(serveraddr));
+  bzero((unsigned char *) &serveraddr, sizeof(serveraddr));
   serveraddr.sin_family = AF_INET;
-  bcopy((char *)server->h_addr, 
-  (char *)&serveraddr.sin_addr.s_addr, server->h_length);
+  bcopy((unsigned char *)server->h_addr, 
+  (unsigned char *)&serveraddr.sin_addr.s_addr, server->h_length);
   serveraddr.sin_port = htons(portno);
   serverlen = sizeof(serveraddr);
 
@@ -124,6 +123,8 @@ int main(int argc, char **argv){
     exit(1);
   }
 
+  
+  g->resetBoard();
   g->loadGame(fromServerBuf);
   int startx=10,starty=10;
   initscr();
@@ -133,6 +134,10 @@ int main(int argc, char **argv){
   WINDOW * board = newwin(MAP_HEIGHT+2,2*MAP_WIDTH+1, starty, startx);
 
   box(board, 0, 0);
+  for (int i = 0; i < 32; i++){
+    printw("%d ", fromServerBuf[i]);
+  }
+  
   refresh();  
 
   getch();

@@ -51,40 +51,39 @@ void game::tick(){
 
 // prereq: data must be 32 chars long
 // stores the game into data
-void game::storeGame(char * data){
+void game::storeGame(unsigned char * data){
   for(int i = 0; i < 32; i++){
     data[i] = 0;
   }
   for (int i = 0; i < AMT_PLRS; i++){
     // first lets use the first character to store user data
     data[i*8] = plrs[i]->getUserData();
-
+    printf("getUserData player: %d %d %d, %d %d\n", plrs[i]->getTeam(), plrs[i]->getDir(), plrs[i]->getDed() ,i, data[i*8]);
     // next lets store the 7 tiles
     for (int j = 0; j < 6; j++){
-      char loc = plrs[i]->getPy(j);
-      loc += plrs[i]->getPx(j)*2^4;
+      unsigned char loc = plrs[i]->getPy(j);
+      loc += plrs[i]->getPx(j)*16;
       data[i*8+j+1] = loc;
     }
-    char loc = plrs[i]->getY();
-    loc += plrs[i]->getX()*2^4;
+    unsigned char loc = plrs[i]->getY();
+    loc += plrs[i]->getX()*16;
 
     data[i*8+7] = loc;
-    
+    printf("getUserData %d %d\n", i, data[i*8]);
   }
-  
 }
 
-void game::loadGame(char * data){
+void game::loadGame(unsigned char * data){
   
   for (int i = 0; i < AMT_PLRS; i++){
-    int x = data[i*8+7]/2^4;
-    int y = data[i*8+7]%2^4;
+    int x = data[i*8+7]/16;
+    int y = data[i*8+7]-x;
     plrs[i]->loadUserData(data[i*8],x,y);
   }
   for (int i = 0; i < AMT_PLRS; i++){
     for (int j = 0; j < 7; j++){
-      int x = data[i*8+j+1]/2^4;
-      int y = data[i*8+j+1]%2^4;
+      int x = data[i*8+j+1]/16;
+      int y = data[i*8+j+1]-x;
       myMap->setControl(x,y,plrs[i]->getTeam());
     }
   }
@@ -97,6 +96,16 @@ void game::setDirection(int player, int dir){
 
 int game::blockVal(int x, int y){
   return myMap->getController(x,y);
+}
+
+void game::resetBoard(){
+  for (int i = 0; i < 16; i++){
+    for (int j = 0; j < 16; j++){
+      myMap->setControl(i,j,-1);
+    }
+    
+  }
+  
 }
 
 game::~game(){

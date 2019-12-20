@@ -23,10 +23,10 @@ client.o: $(CLIDIR)/client.cpp
 	$(CC) $(CFLAGS) $(CLIDIR)/client.cpp 
 
 tron_s: game.o map.o player.o server.o
-	$(CC) map.o player.o game.o server.o -o tron_s 
+	$(CC) -g map.o player.o game.o server.o -o tron_s 
 	
 tron_c: game.o map.o player.o client.o
-	$(CC) map.o player.o game.o client.o -lncurses -o tron_c 
+	$(CC) -g map.o player.o game.o client.o -lncurses -o tron_c 
 
 clean: 
 	rm -rf *o tron_s tron_c

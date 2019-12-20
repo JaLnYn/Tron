@@ -52,13 +52,13 @@ void printAddr(){
   if (ifAddrStruct!=NULL) freeifaddrs(ifAddrStruct);
 }
 
-int extractCommand(char * fromClientBuf){
+int extractCommand(unsigned char * fromClientBuf){
   int cmd = (fromClientBuf[4]-'0')*100;
       cmd += (fromClientBuf[5]-'0')*10;
       cmd += (fromClientBuf[6]-'0')*1;
   return cmd;
 }
-int extractKey(char * fromClientBuf){
+int extractKey(unsigned char * fromClientBuf){
   int key = (fromClientBuf[0]-'0')*1000;
       key += (fromClientBuf[1]-'0')*100;
       key += (fromClientBuf[2]-'0')*10;
@@ -85,8 +85,8 @@ int main(int argc, char ** argv){
   int currentAddrMax = 0;
   struct hostent * hostp; //host info
   char * hostaddrp; // host adddr string
-  char toClientBuf[TO_CLI_BUF_SIZE];
-  char fromClientBuf[FROM_CLI_BUF_SIZE];
+  unsigned char toClientBuf[TO_CLI_BUF_SIZE];
+  unsigned char fromClientBuf[FROM_CLI_BUF_SIZE];
 
 
   if(argc != 2){
@@ -154,7 +154,7 @@ int main(int argc, char ** argv){
   for(int i = 0; i < amountPlayers;){
 
     bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
-
+    clientLens[currentAddrMax] = sizeof(clientaddrs[currentAddrMax]);
     int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddrs[currentAddrMax], &(clientLens[currentAddrMax]));
     //TODO store senders 
     if(n>0){
@@ -191,10 +191,14 @@ int main(int argc, char ** argv){
   //TODO finished waiting for all senders. send them start signal
   //MAY BE USEFULL:n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
 
+  bzero(toClientBuf,TO_CLI_BUF_SIZE);
   g->storeGame(toClientBuf);
+  for (int i = 0; i < 32; i++){
+    printf("%d ", toClientBuf[i]);
+  }
 
   for(int j = 0; j < currentAddrMax; j++){
-    int n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));
+    int n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));
     if(n < 0) {
       perror("ERROR in sendto");
       exit(1);
@@ -246,12 +250,12 @@ int main(int argc, char ** argv){
           perror("ERROR on inet_ntoa");
           exit(1);
         }
-        printf("server recieved %d/%d bytes: %s\n", (int) strlen(fromClientBuf), n, fromClientBuf);
+        //printf("server recieved %d/%d bytes: %s\n", (int) strlen(fromClientBuf), n, fromClientBuf);
         // parse input // TODO
 
 
         // send current toClientBuffer
-        n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
+        n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddr, clientlen);
         if(n < 0) {
           perror("ERROR in sendto");
           exit(1);

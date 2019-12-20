@@ -2,6 +2,7 @@
 #ifndef PLAYER_H
 #define PLAYER_H
 
+#include <stdio.h>
 #include "map.hpp"
 
 class player{
@@ -28,9 +29,11 @@ public:
 
   // get the team
   int getTeam();
+  int getDir();
+  int getDed();
 
-  char getUserData();
-  void loadUserData(char l, int x, int y);
+  unsigned char getUserData();
+  void loadUserData(unsigned char l, int x, int y);
 
   // get x and y
   int getX();
