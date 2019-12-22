@@ -29,17 +29,17 @@ void player::tick(){
   px[2] = x;
   py[2] = y;
 
-  if(!ded){
-    if(dir == 0){
+  //if(!ded){
+    if(dir == 0 && y >0){
       y--;
-    }else if(dir == 1){
+    }else if(dir == 1 && x>0){
       x--;
-    }else if(dir == 2){
+    }else if(dir == 2 && y < 15){
       y++;
-    }else if(dir == 3){
+    }else if(dir == 3 && x < 15){
       x++;
     }
-  }
+  //}
 
 }
 

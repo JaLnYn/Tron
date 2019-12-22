@@ -11,6 +11,9 @@
 #include <errno.h>
 #include <ifaddrs.h>
 #include "../game/game.hpp"
+#include <sys/epoll.h>
+#include <sys/prctl.h>
+#include <signal.h>
 
 
 using namespace std::chrono_literals;
@@ -22,6 +25,7 @@ constexpr std::chrono::nanoseconds timestep(125ms);
 #define FROM_CLI_BUF_SIZE 8
 
 // This function is used to print addresses
+
 
 void printAddr(){
 
@@ -73,228 +77,197 @@ int main(int argc, char ** argv){
   //seed rand
   srand(time(NULL));
 
-  game*g = new game();
-
-  int sockfd; // socket
-  int port; // my port to listen on
-  struct sockaddr_in serveraddr; // server's address
-  struct sockaddr_in clientaddrs[4];
-  socklen_t clientlen; // client's address size
-  struct sockaddr_in clientaddr; // client's address
-  socklen_t clientLens[4];
-  int currentAddrMax = 0;
-  struct hostent * hostp; //host info
-  char * hostaddrp; // host adddr string
-  unsigned char toClientBuf[TO_CLI_BUF_SIZE];
-  unsigned char fromClientBuf[FROM_CLI_BUF_SIZE];
-
-
-  if(argc != 2){
-    perror("usage: file <port>");
-    exit(1);
+  int toChdfd[2]; // 0 is to parent 1 is to child
+  int toParfd[2]; // 0 is to parent 1 is to child
+  int childId;
+  
+ 
+  if ((pipe(toParfd) == -1) || (pipe(toChdfd) == -1) || (childId = fork()) == -1){
+      perror("pipe/fork failed :(");
+      return 1;
   }
-  port = atoi(argv[1]);
+  if (childId == 0){ // child{
+    prctl(PR_SET_PDEATHSIG, SIGHUP);
+    int errout = 0;
+    int errin = 0;
 
-  // create socket
-  sockfd = socket(AF_INET, SOCK_DGRAM, 0);
-  if(sockfd<0){
-    perror("ERROR: opening socket.");
-    exit(1);
-  }
-
-  //int option = 1;
-  //setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&option, sizeof(int));
-
-
-  //internet stuff
-  bzero((char*) &serveraddr, sizeof(serveraddr));
-  serveraddr.sin_family = AF_INET;
-  serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
-  serveraddr.sin_port = htons((unsigned short)port);
-
-  if(bind(sockfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0){
-    perror("ERROR on bind");
-    exit(1);
-  }
-
-
-
-  int playerKeys[4];
-  int playerJoined[4];
-  printf("(you can enter 1,2,3 or 4)\n");
-  printf("Enter amount of players: \n");
-  int amountPlayers = 0;
-  scanf("%d",&amountPlayers);
-  // hacky way to clear screen
-  printf("\033[H\033[J");
-  printAddr();
-  printf("PORT: %d\n", port);
-  printf("player| key| in\n");
-  for(int i = 0; i < 4; i++){
-    bool keyExists = true;
-    while (keyExists == true ){
-      playerKeys[i] = rand()%10000;
-      playerJoined[i] = 0;
-      keyExists = false;
-      for(int j = 0; j < i; j++){
-        if(playerKeys[i] == playerKeys[j]){
-          keyExists = true;
+    close (toParfd[0]);
+    close (toChdfd[1]);
+    
+    if (errout < 0 || errin < 0) perror("dup2 failed");
+    int c = 0;
+    read(toChdfd[0],&c,1);
+    if(c == 1){
+      c = 2;
+      using clock = std::chrono::high_resolution_clock;
+      double microseconds = 0;
+      while(1) {
+        auto start = clock::now();
+        auto x = start + timestep - clock::now();
+        microseconds = x.count()/1000.0;
+        
+        if(microseconds < 0){
+          microseconds = 0;
         }
+        write(toParfd[1],&c,1);
+        usleep(microseconds);
       }
     }
+    return 1;
+  } else { // parent
+        
+    game*g = new game();
 
-    printf("%d     |%04d|",i+1, playerKeys[i]);
-    if(playerJoined[i] == 1){
-      printf(" o\n");
-    }else{
-      printf(" x\n");
+    int sockfd; // socket
+    int port; // my port to listen on
+    struct sockaddr_in serveraddr; // server's address
+    struct sockaddr_in clientaddrs[4];
+    socklen_t clientlen; // client's address size
+    struct sockaddr_in clientaddr; // client's address
+    socklen_t clientLens[4];
+    int currentAddrMax = 0;
+    //struct hostent * hostp; //host info
+    //char * hostaddrp; // host adddr string
+    unsigned char toClientBuf[TO_CLI_BUF_SIZE];
+    unsigned char fromClientBuf[FROM_CLI_BUF_SIZE];
+
+
+    if(argc != 2){
+      perror("usage: file <port>");
+      exit(1);
     }
-    fflush(stdin);
-  } 
-  for(int i = 0; i < amountPlayers;){
+    port = atoi(argv[1]);
 
-    bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
-    clientLens[currentAddrMax] = sizeof(clientaddrs[currentAddrMax]);
-    int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddrs[currentAddrMax], &(clientLens[currentAddrMax]));
-    //TODO store senders 
-    if(n>0){
-      printf("\033[H\033[J");
-      int key = extractKey(fromClientBuf);
-      int cmd = extractCommand(fromClientBuf);
-      if(cmd == 0){
-        for (int j = 0; j < 4; j++){
-          if(playerKeys[j] == key && playerJoined[j] == 0){
-            playerJoined[j] = 1;
-            currentAddrMax++;
-            i++;
+    // create socket
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if(sockfd<0){
+      perror("ERROR: opening socket.");
+      exit(1);
+    }
+
+    //int option = 1;
+    //setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, (const void *)&option, sizeof(int));
+
+
+    //internet stuff
+    bzero((char*) &serveraddr, sizeof(serveraddr));
+    serveraddr.sin_family = AF_INET;
+    serveraddr.sin_addr.s_addr = htonl(INADDR_ANY);
+    serveraddr.sin_port = htons((unsigned short)port);
+
+    if(bind(sockfd, (struct sockaddr *)&serveraddr, sizeof(serveraddr)) < 0){
+      perror("ERROR on bind");
+      exit(1);
+    }
+
+
+
+    int playerKeys[4];
+    int playerJoined[4];
+    printf("(you can enter 1,2,3 or 4)\n");
+    printf("Enter amount of players: \n");
+    int amountPlayers = 0;
+    scanf("%d",&amountPlayers);
+    // hacky way to clear screen
+    printf("\033[H\033[J");
+    printAddr();
+    printf("PORT: %d\n", port);
+    printf("player| key| in\n");
+    for(int i = 0; i < 4; i++){
+      bool keyExists = true;
+      while (keyExists == true ){
+        playerKeys[i] = rand()%10000;
+        playerJoined[i] = 0;
+        keyExists = false;
+        for(int j = 0; j < i; j++){
+          if(playerKeys[i] == playerKeys[j]){
+            keyExists = true;
           }
         }
       }
-      
-      
-      printAddr();
-      printf("PORT: %d\n", port);
-      printf("%d, %d attempted to join.\n", key, cmd);
-      printf("player| key| in\n");
-      for(int i = 0; i < 4; i++){
-        printf("%d     |%04d|",i+1, playerKeys[i]);
-        if(playerJoined[i] != 0){
-          printf(" o\n");
-        }else{
-          printf(" x\n");
-        }
+
+      printf("%d     |%04d|",i+1, playerKeys[i]);
+      if(playerJoined[i] == 1){
+        printf(" o\n");
+      }else{
+        printf(" x\n");
       }
-      // decode key
+      fflush(stdin);
+    } 
+    for(int i = 0; i < amountPlayers;){
 
-    }
-  }
-  //TODO finished waiting for all senders. send them start signal
-  //MAY BE USEFULL:n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
-
-  bzero(toClientBuf,TO_CLI_BUF_SIZE);
-  g->storeGame(toClientBuf);
-  // for (int i = 0; i < 32; i++){
-  //   printf("%d ", toClientBuf[i]);
-  // }
-
-  for(int j = 0; j < currentAddrMax; j++){
-    int n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));
-    if(n < 0) {
-      perror("ERROR in sendto");
-      exit(1);
-    }
-  }
-
-  // wait for connections
-  //main loop
-  //set some options 
-
-
-  struct timeval read_timeout;
-  read_timeout.tv_sec = 0;
-  read_timeout.tv_usec = 100;
-  if (setsockopt(sockfd, SOL_SOCKET, SO_RCVTIMEO,&read_timeout,sizeof(read_timeout)) < 0) {
-    perror("Error with options");
-  }
-
-  clientlen = sizeof(clientaddr);
-  
-  using clock = std::chrono::high_resolution_clock;
-  
-  
-  bool quit_game = false;
-  unsigned int current_tick = 0;
-  double previousTickTime = 10000;
-  printf("start loop\n");
-  double microseconds = 0;
-  double scanTime = 35000000;
-  while(!quit_game) {
-    auto start = clock::now();
-
-    double timeTillNextTick = (start + timestep - clock::now()).count();
-    
-    
-    while(0 < timeTillNextTick - (double)previousTickTime*2-scanTime*2){ 
-      auto tickStart = clock::now();
       bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
-      int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
-      
-      if(n >= 0){
-        hostp = gethostbyaddr((const char *) &clientaddr.sin_addr.s_addr, sizeof(clientaddr.sin_addr.s_addr), AF_INET);
-        if(hostp == NULL) {
-          perror("ERROR on gethostbyaddr");
-          exit(1);
+      clientLens[currentAddrMax] = sizeof(clientaddrs[currentAddrMax]);
+      int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddrs[currentAddrMax], &(clientLens[currentAddrMax]));
+      //TODO store senders 
+      if(n>0){
+        printf("\033[H\033[J");
+        int key = extractKey(fromClientBuf);
+        int cmd = extractCommand(fromClientBuf);
+        if(cmd == 0){
+          for (int j = 0; j < 4; j++){
+            if(playerKeys[j] == key && playerJoined[j] == 0){
+              playerJoined[j] = 1;
+              currentAddrMax++;
+              i++;
+            }
+          }
         }
-        hostaddrp = inet_ntoa(clientaddr.sin_addr);
-        if(hostaddrp == NULL){ 
-          perror("ERROR on inet_ntoa");
-          exit(1);
+        
+        
+        printAddr();
+        printf("PORT: %d\n", port);
+        printf("%d, %d attempted to join.\n", key, cmd);
+        printf("player| key| in\n");
+        for(int i = 0; i < 4; i++){
+          printf("%d     |%04d|",i+1, playerKeys[i]);
+          if(playerJoined[i] != 0){
+            printf(" o\n");
+          }else{
+            printf(" x\n");
+          }
         }
-        //printf("server recieved %d/%d bytes: %s\n", (int) strlen(fromClientBuf), n, fromClientBuf);
-        // parse input // TODO
+        // decode key
 
+      }
+    }
+    //TODO finished waiting for all senders. send them start signal
+    //MAY BE USEFULL:n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
 
-        // send current toClientBuffer
-        n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddr, clientlen);
-        if(n < 0) {
-          perror("ERROR in sendto");
-          exit(1);
-        }
-      }else if(n < 0 && errno!=EAGAIN){
-        perror("ERROR in recv from");
+    bzero(toClientBuf,TO_CLI_BUF_SIZE);
+    g->storeGame(toClientBuf);
+    // for (int i = 0; i < 32; i++){
+    //   printf("%d ", toClientBuf[i]);
+    // }
+
+    for(int j = 0; j < currentAddrMax; j++){
+      int n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));
+      if(n < 0) {
+        perror("ERROR in sendto");
         exit(1);
       }
-      scanTime = (clock::now() - tickStart).count();
-      if(scanTime < 0){
-        scanTime = 0;
-      }
-      timeTillNextTick = (start + timestep - clock::now()).count();
+    }
+
+    // wait for connections
+    //main loop
+    //set some options 
+    clientlen = sizeof(clientaddr);
+    printf("cid: %d\n", childId);
+    printf("Start Loop\n");
+    char c = 1;
+    write(toChdfd[1],&c,1);
+
+    while (1)
+    { 
+      read(toParfd[0], &c, 1); 
     }
     
-    //tick here
-    auto tickStart = clock::now();
-    //printf("tick: %d\n", current_tick);
-    // parse output //TODO
 
 
-
-    previousTickTime = (clock::now() - tickStart).count();
-    if(previousTickTime < 0){
-      previousTickTime = 0;
-    }
-    auto x = start + timestep - clock::now();
-    microseconds = x.count()/1000.0;
-    
-    if(microseconds < 0){
-      printf("running late %lf!!!!\n", microseconds);
-      microseconds = 0;
-    }
-    //printf("tick. previous tick time: %lf, slept for %lf\n", previousTickTime, microseconds);
-    usleep(microseconds);
-    current_tick++;
   }
 
   
+
   
   return 0;
   

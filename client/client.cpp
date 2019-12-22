@@ -115,7 +115,6 @@ int main(int argc, char **argv){
     exit(0);
   }
   
-
   bzero(fromServerBuf, FROM_SER_BUF_SIZE);
   n = recvfrom(sockfd, fromServerBuf, FROM_SER_BUF_SIZE, 0,( struct sockaddr *) &serveraddr, &serverlen);
   if(n < 0) {
@@ -129,7 +128,6 @@ int main(int argc, char **argv){
   
   int startx=10,starty=10;
   initscr();
-  cbreak();
   noecho();
 
   WINDOW * board = newwin(MAP_HEIGHT+2,2*MAP_WIDTH+1, starty, startx);
@@ -141,13 +139,22 @@ int main(int argc, char **argv){
   
   refresh();  
 
-  getch();
-  // mvwprintw(board,1,1,"Gamestart");
-  // wrefresh(board);
+  while(1){
+    clear();
+    getch();
+    setSendItem(toServerBuf,key,1,0);
+    n = sendto(sockfd, toServerBuf, TO_SER_BUF_SIZE, 0, ( struct sockaddr *) &serveraddr, serverlen);
+    move(0,0);
+    printw("%d, %s was sent\n", n,toServerBuf);
+    if (n < 0){
+      perror("ERROR: sendto");
+      exit(0);
+    }
+    refresh();
+  }
   
-  loadWin(g,board);
+  //loadWin(g,board);
 
-  getch();
   
 	endwin();
 
