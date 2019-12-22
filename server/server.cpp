@@ -251,15 +251,45 @@ int main(int argc, char ** argv){
     // wait for connections
     //main loop
     //set some options 
+
+    int ep = epoll_create1(0);
+    struct epoll_event e1,e2, e[2]; // e1 for sockfd, e2 for timer
+    memset(&e1, 0, sizeof(struct epoll_event));
+    e1.events = EPOLLIN; 
+    e1.data.fd = sockfd;
+    epoll_ctl(ep, EPOLL_CTL_ADD, sockfd, &e1);
+    memset(&e2, 0, sizeof(struct epoll_event));
+    e2.events = EPOLLIN; 
+    e2.data.fd = toParfd[0];
+    epoll_ctl(ep, EPOLL_CTL_ADD, toParfd[0], &e2);
+    
+
     clientlen = sizeof(clientaddr);
     printf("cid: %d\n", childId);
     printf("Start Loop\n");
     char c = 1;
+
     write(toChdfd[1],&c,1);
 
     while (1)
     { 
-      read(toParfd[0], &c, 1); 
+      int n = epoll_wait(ep, e, 2, -1);
+      for(int i = 0; i < n; i++){
+        if (e[i].data.fd == sockfd) {
+          //
+          bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
+          int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
+          if(n <= 0){
+            perror("ERROR in recv from");
+            exit(1);
+          }
+          printf("Recieved %s\n",fromClientBuf);
+        }else if(e[i].data.fd == toParfd[0]){
+          read(toParfd[0], &c, 1);
+          printf("tick\n");
+          // send 
+        }
+      }
     }
     
 
