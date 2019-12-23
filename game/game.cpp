@@ -5,32 +5,29 @@ game::game(){
 
   
   
-  if(AMT_PLRS > 0){
-    plrs[0] = new player(3, HEIGHT - 4, 0);
-    player*plr = plrs[0];
-    myMap->setControl(plr->getX(),plr->getY(), plr->getTeam());
-  }
-  if(AMT_PLRS > 1){
-    plrs[1] = new player(3, 3, 1);
-    player*plr = plrs[1];
-    myMap->setControl(plr->getX(),plr->getY(), plr->getTeam());
-  }
-  if(AMT_PLRS > 2){
-    plrs[2] = new player(WIDTH - 4, 3, 2);  
-    player*plr = plrs[2];
-    myMap->setControl(plr->getX(),plr->getY(), plr->getTeam());
-  }
-  if(AMT_PLRS > 3){
-    plrs[3] = new player(WIDTH - 4, HEIGHT - 4, 3);
-    player*plr = plrs[3];
-    myMap->setControl(plr->getX(),plr->getY(), plr->getTeam());
-  }
+  plrs[0] = new player(3, HEIGHT - 4, 0);
+  myMap->setControl(plrs[0]->getX(),plrs[0]->getY(), plrs[0]->getTeam());
+
+  plrs[1] = new player(WIDTH - 4, HEIGHT - 4, 1);
+  myMap->setControl(plrs[1]->getX(),plrs[1]->getY(), plrs[1]->getTeam());
+
+  plrs[2] = new player(WIDTH - 4, 3, 2);  
+  myMap->setControl(plrs[2]->getX(),plrs[2]->getY(), plrs[2]->getTeam());
+
+  plrs[3] = new player(3, 3, 3);
+  myMap->setControl(plrs[3]->getX(),plrs[3]->getY(), plrs[3]->getTeam());
+
   
 }
 
 void game::tick(){
   for (int i = 0; i < AMT_PLRS; i++){
     plrs[i]->tick();
+    // printf("team: %d x0: %d y0 %d",plrs[i]->getTeam(), plrs[i]->getX(), plrs[i]->getY());
+    // for(int j = 0; j < 6; j++){
+    //   printf ("|| x: %d y: %d",plrs[i]->getPx(j),plrs[i]->getPy(j) );
+    // }
+    // printf("\n");
   }
   for(int i = 0; i < AMT_PLRS; i++){
     for(int j = 0; j < AMT_PLRS; j++){
@@ -55,12 +52,16 @@ void game::storeGame(unsigned char * data){
   for(int i = 0; i < 32; i++){
     data[i] = 0;
   }
+  
   for (int i = 0; i < AMT_PLRS; i++){
+    
     // first lets use the first character to store user data
     data[i*8] = plrs[i]->getUserData();
+    
     //printf("getUserData player: %d %d %d, %d %d\n", plrs[i]->getTeam(), plrs[i]->getDir(), plrs[i]->getDed() ,i, data[i*8]);
     // next lets store the 7 tiles
     for (int j = 0; j < 6; j++){
+      
       unsigned char loc = plrs[i]->getPy(j);
       loc += plrs[i]->getPx(j)*16;
       data[i*8+j+1] = loc;
@@ -69,26 +70,30 @@ void game::storeGame(unsigned char * data){
     loc += plrs[i]->getX()*16;
 
     data[i*8+7] = loc;
-    //printf("getUserData %d %d\n", i, data[i*8]);
+    
   }
+  
 }
 
 void game::loadGame(unsigned char * data){
-  
   for (int i = 0; i < AMT_PLRS; i++){
     int x = data[i*8+7]/16;
     int y = data[i*8+7]-x*16;
     plrs[i]->loadUserData(data[i*8],x,y);
+    myMap->setControl(x,y,plrs[i]->getTeam());
   }
   for (int i = 0; i < AMT_PLRS; i++){
-    for (int j = 0; j < 7; j++){
+    
+    for (int j = 0; j < 6; j++){
       int x = data[i*8+j+1]/16;
       int y = data[i*8+j+1]-x*16;
       myMap->setControl(x,y,plrs[i]->getTeam());
+      
+      
+      
     }
-    //printf("plr: %d, x: %d, y: %d\n", plrs[i]->getTeam(), plrs[i]->getX(), plrs[i]->getY());
+    
   }
-  
   
 }
 
@@ -110,6 +115,37 @@ void game::resetBoard(){
   
 }
 
-game::~game(){
+void game::printGame(){
+  printf("_______________\n");
+  for (int y = 0; y < MAP_HEIGHT; y++)
+  {
+    for (int x = 0; x < MAP_WIDTH; x++){
+      bool hasplr = false;
+      for (int i = 0; i < 4; i++){
+        if(plrs[i]->getX() == x && plrs[i]->getY() == y){
+          printf("x ");
+          hasplr = true;
+        }
+      }
+      if(!hasplr){
+        if(myMap->getController(x,y) == -1){
+          printf(". ");
+        }else{
+          printf("%d ",myMap->getController(x,y));
+        }
+      }
+      
+    }
+    printf("\n");
+    
+  }
+  printf("_______________\n");
   
+}
+
+game::~game(){
+  delete myMap;
+  for(int i = 0; i < 4; i++){
+    delete plrs[i];
+  }
 }

@@ -16,6 +16,7 @@ private:
   player * plrs[AMT_PLRS];
   map * myMap;
 
+  int tickCount = 0;
   void storeNumber(int n, unsigned char * c);
 
 public:
@@ -35,6 +36,8 @@ public:
 
   // this function is for testing only set everything to zero
   void resetBoard();
+
+  void printGame();
 
   ~game();
 };

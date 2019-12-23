@@ -88,13 +88,11 @@ int main(int argc, char ** argv){
   }
   if (childId == 0){ // child{
     prctl(PR_SET_PDEATHSIG, SIGHUP);
-    int errout = 0;
-    int errin = 0;
+    
 
     close (toParfd[0]);
     close (toChdfd[1]);
     
-    if (errout < 0 || errin < 0) perror("dup2 failed");
     int c = 0;
     read(toChdfd[0],&c,1);
     if(c == 1){
@@ -199,7 +197,7 @@ int main(int argc, char ** argv){
       bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
       clientLens[currentAddrMax] = sizeof(clientaddrs[currentAddrMax]);
       int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddrs[currentAddrMax], &(clientLens[currentAddrMax]));
-      //TODO store senders 
+      
       if(n>0){
         printf("\033[H\033[J");
         int key = extractKey(fromClientBuf);
@@ -231,14 +229,10 @@ int main(int argc, char ** argv){
 
       }
     }
-    //TODO finished waiting for all senders. send them start signal
-    //MAY BE USEFULL:n = sendto(sockfd, toClientBuf, strlen(toClientBuf), 0, (struct sockaddr *) &clientaddr, clientlen);
-
+    
     bzero(toClientBuf,TO_CLI_BUF_SIZE);
     g->storeGame(toClientBuf);
-    // for (int i = 0; i < 32; i++){
-    //   printf("%d ", toClientBuf[i]);
-    // }
+    
 
     for(int j = 0; j < currentAddrMax; j++){
       int n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));
@@ -271,8 +265,7 @@ int main(int argc, char ** argv){
 
     write(toChdfd[1],&c,1);
 
-    while (1)
-    { 
+    while (1){ 
       int n = epoll_wait(ep, e, 2, -1);
       for(int i = 0; i < n; i++){
         if (e[i].data.fd == sockfd) {
@@ -284,10 +277,28 @@ int main(int argc, char ** argv){
             exit(1);
           }
           printf("Recieved %s\n",fromClientBuf);
+          int plr = -1;
+          int theKey = extractKey(fromClientBuf);
+          // for (int p = 0; p < AMT_PLRS; p++)
+          // {
+          //   if(playerKeys[i] == ){
+            //TODO here
+          //   }
+          // }
+          
         }else if(e[i].data.fd == toParfd[0]){
           read(toParfd[0], &c, 1);
-          printf("tick\n");
-          // send 
+          g->tick();
+          bzero(toClientBuf, TO_CLI_BUF_SIZE);
+          g->storeGame(toClientBuf);
+          for(int j = 0; j < currentAddrMax; j++){
+            int n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));
+            //printf("sent: %d\n",n);
+            if(n < 0) {
+              perror("ERROR in sendto");
+              exit(1);
+            }
+          }
         }
       }
     }

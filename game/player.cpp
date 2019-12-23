@@ -10,7 +10,7 @@ player::player(int startx, int starty, int startdir){
   px = (int *) malloc(sizeof(int) * 6);
   py = (int *) malloc(sizeof(int) * 6);
 
-  for (int i = 0; i< 6; i++){
+  for (int i = 0; i < 6; i++){
     *(px + i) = startx;
     *(py + i) = starty;
   }
@@ -22,13 +22,12 @@ void player::changeDir(int dir){
 
 void player::tick(){
   
-  for (int i = 0; i < 6; i++){
+  for (int i = 0; i < 5; i++){
     px[i] = px[i + 1];
     py[i] = py[i + 1];
   }
-  px[2] = x;
-  py[2] = y;
-
+  px[5] = x;
+  py[5] = y;
   //if(!ded){
     if(dir == 0 && y >0){
       y--;
@@ -40,6 +39,7 @@ void player::tick(){
       x++;
     }
   //}
+  
 
 }
 
@@ -110,5 +110,7 @@ int player::getPy(int index){
 }
 
 player::~player(){
-
+  free(px);
+  free(py);
+  
 }
