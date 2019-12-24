@@ -17,9 +17,8 @@
 #define TO_SER_BUF_SIZE 8
 //load the game onto the window
 
+// loading the game to the window
 void loadWin(game* g, WINDOW * w){
-  
-  
   for (int x = 0; x < MAP_WIDTH; x++){
     for(int y = 0; y < MAP_HEIGHT; y++){
       mvwprintw(w, y+1,x*2+1,"%c",g->blockVal(x,y)+'0');
@@ -29,6 +28,7 @@ void loadWin(game* g, WINDOW * w){
   wrefresh(w);
 }
 
+// setting the key part of the to server buffer
 void setKey(unsigned char * toServerBuf, int key){
 
   toServerBuf[0] = key/1000 + '0';
@@ -36,12 +36,15 @@ void setKey(unsigned char * toServerBuf, int key){
   toServerBuf[2] = (key%100)/10 +'0';
   toServerBuf[3] = key%10 + '0';
 }
+
+// setting the command part of the to server buffer
 void setCmd(unsigned char * toServerBuf, int cmd){
   toServerBuf[4] = (cmd)/100 + '0';
   toServerBuf[5] = (cmd%100)/10 +'0';
   toServerBuf[6] = cmd%10 + '0';
 }
 
+// setting the to server buffer
 void setSendItem(unsigned char * toserv, int key, int cmd, unsigned char final){
   bzero(toserv, 8);
   setKey(toserv, key);
@@ -49,8 +52,10 @@ void setSendItem(unsigned char * toserv, int key, int cmd, unsigned char final){
   toserv[7] = final + '0';
 }
 
+
 int main(int argc, char **argv){
   
+  //init
   int sockfd, portno, n;
   socklen_t serverlen;
   struct sockaddr_in serveraddr;
@@ -100,6 +105,7 @@ int main(int argc, char **argv){
   } 
 
 
+  // ask user for key
   bzero(toServerBuf, TO_SER_BUF_SIZE);
   int key = 0;
   printf("Please enter your key: ");
@@ -110,6 +116,7 @@ int main(int argc, char **argv){
     exit(1);
   }
 
+  // send key to server
   setSendItem(toServerBuf,key,0,0);
 
   n = sendto(sockfd, toServerBuf, TO_SER_BUF_SIZE, 0, ( struct sockaddr *) &serveraddr, serverlen);
@@ -119,6 +126,7 @@ int main(int argc, char **argv){
     exit(0);
   }
   
+  // get response from server (once we get this we know the server has the right mount of players)
   bzero(fromServerBuf, FROM_SER_BUF_SIZE);
   n = recvfrom(sockfd, fromServerBuf, FROM_SER_BUF_SIZE, 0,( struct sockaddr *) &serveraddr, &serverlen);
   if(n < 0) {
@@ -126,20 +134,19 @@ int main(int argc, char **argv){
     exit(1);
   }
 
+  // initiate ncurses
   int startx=10,starty=10;
   initscr();
   cbreak();
   noecho();
 
+  // start window for game
   WINDOW * board = newwin(MAP_HEIGHT+2,2*MAP_WIDTH+1, starty, startx);
   refresh();  
   box(board, 0, 0);
 
-  
-  
-  
+  // set up epoll
   fcntl(sockfd, F_SETFL, O_NONBLOCK); 
-  //nodelay(stdscr, true);
   fcntl(STDIN_FILENO, F_SETFL, O_NONBLOCK); 
   initscr();
   noecho();
@@ -156,11 +163,13 @@ int main(int argc, char **argv){
   e2.data.fd = STDIN_FILENO;
   epoll_ctl(ep, EPOLL_CTL_ADD, STDIN_FILENO, &e2);
   
+  // some debug stuff
   mvprintw(0,0,"ticks from server: %d",servertick);
   mvprintw(2,0,"ticks from keyboard: %d",keyboardtick);
   int normalTick = 0;
   g->resetBoard();
-  while (1){ 
+
+  while (1){
     int n = epoll_wait(ep, e, 2, -1);
     for(int i = 0; i < n; i++){
       if (e[i].data.fd == sockfd) { // from server
@@ -182,7 +191,7 @@ int main(int argc, char **argv){
           perror("ERROR in recv");
           exit(1);
         }
-      }else if(e[i].data.fd == STDIN_FILENO){
+      }else if(e[i].data.fd == STDIN_FILENO){ // from the keyboard
         char c = getch();
         //fprintf(stderr,"randomly got %d\n", c);
         if(c>=0){
@@ -197,6 +206,7 @@ int main(int argc, char **argv){
           }else if (c == 'd'){
             final = 3;
           }
+          // send command to the server
           setSendItem(toServerBuf, key, sendCmd, final);
           n = sendto(sockfd, toServerBuf, TO_SER_BUF_SIZE, 0, ( struct sockaddr *) &serveraddr, serverlen);
           if (n < 0){
@@ -213,7 +223,6 @@ int main(int argc, char **argv){
     mvprintw(3,0,"ticks: %d",normalTick);
     refresh();
   }
-  //loadWin(g,board);
 
   
 	endwin();

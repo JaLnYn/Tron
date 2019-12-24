@@ -10,7 +10,7 @@ player::player(int startx, int starty, int startdir){
   px = (int *) malloc(sizeof(int) * 6);
   py = (int *) malloc(sizeof(int) * 6);
 
-  for (int i = 0; i < 6; i++){
+  for (int i = 0; i < 6; i++){ 
     *(px + i) = startx;
     *(py + i) = starty;
   }
@@ -23,6 +23,7 @@ void player::changeDir(int dir){
 void player::tick(){
   
   for (int i = 0; i < 5; i++){
+    // all the previous location shift one so that there is space for the new x and y
     px[i] = px[i + 1];
     py[i] = py[i + 1];
   }

@@ -13,7 +13,7 @@ private:
   int ded;
   int dir; // 0 is up, 1 is left, 2 is down, 3 is right
 
-  int * px;
+  int * px; // previous locations, the higher the index, the more recent the location.
   int * py;
 public:
   player(int startx, int starty, int startdir);

@@ -2,8 +2,6 @@
 
 game::game(){
   myMap = new map(WIDTH, HEIGHT);
-
-  
   
   plrs[0] = new player(3, HEIGHT - 4, 0);
   myMap->setControl(plrs[0]->getX(),plrs[0]->getY(), plrs[0]->getTeam());
@@ -81,13 +79,10 @@ void game::loadGame(unsigned char * data){
   }
   for (int i = 0; i < AMT_PLRS; i++){
     
-    for (int j = 0; j < 6; j++){
+    for (int j = 0; j < 6; j++){ // the first 4 bits contain the x coordinate, the last 4 contain the y coordinate
       int x = data[i*8+j+1]/16;
       int y = data[i*8+j+1]-x*16;
       myMap->setControl(x,y,plrs[i]->getTeam());
-      
-      
-      
     }
     
   }

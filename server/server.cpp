@@ -86,7 +86,7 @@ int main(int argc, char ** argv){
       perror("pipe/fork failed :(");
       return 1;
   }
-  if (childId == 0){ // child{
+  if (childId == 0){ // child (so we are a timer)
     prctl(PR_SET_PDEATHSIG, SIGHUP);
     
 
@@ -94,7 +94,7 @@ int main(int argc, char ** argv){
     close (toChdfd[1]);
     
     int c = 0;
-    read(toChdfd[0],&c,1);
+    read(toChdfd[0],&c,1); // wait for signal from parent to start
     if(c == 1){
       c = 2;
       using clock = std::chrono::high_resolution_clock;
@@ -107,7 +107,7 @@ int main(int argc, char ** argv){
         if(microseconds < 0){
           microseconds = 0;
         }
-        write(toParfd[1],&c,1);
+        write(toParfd[1],&c,1); // every 125 milsecond we tell the parent it's time to tick
         usleep(microseconds);
       }
     }
@@ -192,7 +192,7 @@ int main(int argc, char ** argv){
       }
       fflush(stdin);
     } 
-    for(int i = 0; i < amountPlayers;){
+    for(int i = 0; i < amountPlayers;){ // we will recive amountPlayers players
 
       bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
       clientLens[currentAddrMax] = sizeof(clientaddrs[currentAddrMax]);
@@ -204,7 +204,7 @@ int main(int argc, char ** argv){
         int cmd = extractCommand(fromClientBuf);
         if(cmd == 0){
           for (int j = 0; j < 4; j++){
-            if(playerKeys[j] == key && playerJoined[j] == 0){
+            if(playerKeys[j] == key && playerJoined[j] == 0){ // if key is matching and the key has not joined yet.
               playerJoined[j] = 1;
               currentAddrMax++;
               i++;
@@ -225,7 +225,6 @@ int main(int argc, char ** argv){
             printf(" x\n");
           }
         }
-        // decode key
 
       }
     }
@@ -242,10 +241,6 @@ int main(int argc, char ** argv){
       }
     }
 
-    // wait for connections
-    //main loop
-    //set some options 
-
     int ep = epoll_create1(0);
     struct epoll_event e1,e2, e[2]; // e1 for sockfd, e2 for timer
     memset(&e1, 0, sizeof(struct epoll_event));
@@ -259,16 +254,16 @@ int main(int argc, char ** argv){
     
 
     clientlen = sizeof(clientaddr);
-    printf("cid: %d\n", childId);
+    printf("cid: %d\n", childId); 
     printf("Start Loop\n");
     char c = 1;
 
-    write(toChdfd[1],&c,1);
+    write(toChdfd[1],&c,1); // tell the timer to start timing
 
     while (1){ 
       int n = epoll_wait(ep, e, 2, -1);
       for(int i = 0; i < n; i++){
-        if (e[i].data.fd == sockfd) {
+        if (e[i].data.fd == sockfd) { // something sent from the client
           //
           bzero(fromClientBuf, FROM_CLI_BUF_SIZE);
           int n = recvfrom(sockfd, fromClientBuf,FROM_CLI_BUF_SIZE, 0, (struct sockaddr*) &clientaddr, &clientlen);
@@ -276,11 +271,11 @@ int main(int argc, char ** argv){
             perror("ERROR in recv from");
             exit(1);
           }
-          //printf("Recieved %s\n",fromClientBuf);
+
           int theKey = extractKey(fromClientBuf);
           bool commandRecongnized = false;
           for (int p = 0; p < AMT_PLRS; p++){
-            if(playerKeys[p] == theKey){
+            if(playerKeys[p] == theKey){ // decode what the sent message said
              
               int final = fromClientBuf[7];
               if(extractCommand(fromClientBuf) == 1){
@@ -305,7 +300,7 @@ int main(int argc, char ** argv){
             printf("Command: %s not recongnized\n",fromClientBuf);
           }
           
-        }else if(e[i].data.fd == toParfd[0]){
+        }else if(e[i].data.fd == toParfd[0]){ // the timer ticked, its time to update the game
           read(toParfd[0], &c, 1);
           g->tick();
           bzero(toClientBuf, TO_CLI_BUF_SIZE);
