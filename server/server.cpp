@@ -276,15 +276,34 @@ int main(int argc, char ** argv){
             perror("ERROR in recv from");
             exit(1);
           }
-          printf("Recieved %s\n",fromClientBuf);
-          int plr = -1;
+          //printf("Recieved %s\n",fromClientBuf);
           int theKey = extractKey(fromClientBuf);
-          // for (int p = 0; p < AMT_PLRS; p++)
-          // {
-          //   if(playerKeys[i] == ){
-            //TODO here
-          //   }
-          // }
+          bool commandRecongnized = false;
+          for (int p = 0; p < AMT_PLRS; p++){
+            if(playerKeys[p] == theKey){
+             
+              int final = fromClientBuf[7];
+              if(extractCommand(fromClientBuf) == 1){
+                commandRecongnized = true;
+                if(final == '0'){
+                  g->setDirection(p,0);
+                }else if(final == '1'){
+                  g->setDirection(p,1);
+                }else if(final == '2'){
+                  g->setDirection(p,2);
+                }else if (final == '3'){
+                  g->setDirection(p,3);
+                }else{
+                  commandRecongnized = false;
+                }
+                
+              }
+              
+            }
+          }
+          if(commandRecongnized == false){
+            printf("Command: %s not recongnized\n",fromClientBuf);
+          }
           
         }else if(e[i].data.fd == toParfd[0]){
           read(toParfd[0], &c, 1);
@@ -293,7 +312,6 @@ int main(int argc, char ** argv){
           g->storeGame(toClientBuf);
           for(int j = 0; j < currentAddrMax; j++){
             int n = sendto(sockfd, toClientBuf, TO_CLI_BUF_SIZE, 0, (struct sockaddr *) &clientaddrs[j], (clientLens[j]));
-            //printf("sent: %d\n",n);
             if(n < 0) {
               perror("ERROR in sendto");
               exit(1);

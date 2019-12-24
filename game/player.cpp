@@ -28,23 +28,25 @@ void player::tick(){
   }
   px[5] = x;
   py[5] = y;
-  //if(!ded){
-    if(dir == 0 && y >0){
+  if(!ded){
+    if(dir == 0 && y > 0){
       y--;
-    }else if(dir == 1 && x>0){
+    }else if(dir == 1 && x > 0){
       x--;
     }else if(dir == 2 && y < 15){
       y++;
     }else if(dir == 3 && x < 15){
       x++;
+    }else{
+      ded = 1;
     }
-  //}
+  }
   
 
 }
 
 void player::kill(){
-  
+  ded = 1;
 }
 
 int player::getTeam(){

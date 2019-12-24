@@ -23,18 +23,15 @@ game::game(){
 void game::tick(){
   for (int i = 0; i < AMT_PLRS; i++){
     plrs[i]->tick();
-    // printf("team: %d x0: %d y0 %d",plrs[i]->getTeam(), plrs[i]->getX(), plrs[i]->getY());
-    // for(int j = 0; j < 6; j++){
-    //   printf ("|| x: %d y: %d",plrs[i]->getPx(j),plrs[i]->getPy(j) );
-    // }
-    // printf("\n");
   }
   for(int i = 0; i < AMT_PLRS; i++){
-    for(int j = 0; j < AMT_PLRS; j++){
-      if(plrs[i]->getX() == plrs[j]->getX() && plrs[i]->getY() == plrs[j]->getY()){
-        // if j and i are on the same square, kill both of them
-        plrs[i]->kill();
-        plrs[j]->kill();
+    for(int j = i; j < AMT_PLRS; j++){
+      if(i != j){
+        if(plrs[i]->getX() == plrs[j]->getX() && plrs[i]->getY() == plrs[j]->getY()){
+          // if j and i are on the same square, kill both of them
+          plrs[i]->kill();
+          plrs[j]->kill();
+        }
       }
     }
     int tileTeam = myMap->getController(plrs[i]->getX(), plrs[i]->getY());

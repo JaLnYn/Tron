@@ -6,8 +6,8 @@ Server:
 - Game info encoding [Complete]
 - Initial connection with client [Complete]
 - Set up the timer (forked) for the server [Complete]
-- Redoing the gameloop with epoll [Complete]
-- Work on reading the input [TODO]
+- Redoing the gameloop with epoll [COMPLETE]
+- Work on reading the input [COMPLETE]
 
 
 
@@ -17,6 +17,6 @@ Client:
 - Initial connection with client [Complete]
 - Client Game Loop [COMPLETE]
 - Reading userinput [COMPLETE]
-- Sending userinput to server [TODO]
+- Sending userinput to server [COMPLETE]
 
 I while trying to figure out the game loop I came across a solution with epoll which is much better. Now I will rewrite ThClient and server using this solution
