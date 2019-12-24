@@ -19,4 +19,4 @@ Client:
 - Reading userinput [COMPLETE]
 - Sending userinput to server [COMPLETE]
 
-I while trying to figure out the game loop I came across a solution with epoll which is much better. Now I will rewrite ThClient and server using this solution
+I while trying to figure out the game loop I came across a solution with epoll which is much better. Now I will rewrite the Client and server using this solution
