@@ -2,19 +2,19 @@
 Tasks to be done:
 
 Server:
-- Game loop and Client communication loop timings [Complete]
-- Game info encoding [Complete]
-- Initial connection with client [Complete]
-- Set up the timer (forked) for the server [Complete]
+- Game loop and Client communication loop timings [COMPLETE]
+- Game info encoding [COMPLETE]
+- Initial connection with client [COMPLETE]
+- Set up the timer (forked) for the server [COMPLETE]
 - Redoing the gameloop with epoll [COMPLETE]
 - Work on reading the input [COMPLETE]
 
 
 
 Client:
-- Simple ncureses window [Complete]
-- Reading and translating data sent from the client [Complete]
-- Initial connection with client [Complete]
+- Simple ncureses window [COMPLETE]
+- Reading and translating data sent from the client [COMPLETE]
+- Initial connection with client [COMPLETE]
 - Client Game Loop [COMPLETE]
 - Reading userinput [COMPLETE]
 - Sending userinput to server [COMPLETE]
